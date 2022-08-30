@@ -24,15 +24,16 @@ This document describes spdm_dump tool. It can be used to parse the SPDM message
          [--psk <pre-shared key>]
          [--dhe_secret <session DHE secret>]
          [--req_cap       CERT|CHAL|                                ENCRYPT|MAC|MUT_AUTH|KEY_EX|PSK|                 ENCAP|HBEAT|KEY_UPD|HANDSHAKE_IN_CLEAR|PUB_KEY_ID]
-         [--rsp_cap CACHE|CERT|CHAL|MEAS_NO_SIG|MEAS_SIG|MEAS_FRESH|ENCRYPT|MAC|MUT_AUTH|KEY_EX|PSK|PSK_WITH_CONTEXT|ENCAP|HBEAT|KEY_UPD|HANDSHAKE_IN_CLEAR|PUB_KEY_ID]
-         [--hash SHA_256|SHA_384|SHA_512|SHA3_256|SHA3_384|SHA3_512]
+         [--rsp_cap CACHE|CERT|CHAL|MEAS_NO_SIG|MEAS_SIG|MEAS_FRESH|ENCRYPT|MAC|MUT_AUTH|KEY_EX|PSK|PSK_WITH_CONTEXT|ENCAP|HBEAT|KEY_UPD|HANDSHAKE_IN_CLEAR|PUB_KEY_ID|SET_CERT|CSR|CERT_INSTALL_RESET]
+         [--hash SHA_256|SHA_384|SHA_512|SHA3_256|SHA3_384|SHA3_512|SM3_256]
          [--meas_spec DMTF]
-         [--meas_hash RAW_BIT|SHA_256|SHA_384|SHA_512|SHA3_256|SHA3_384|SHA3_512]
-         [--asym RSASSA_2048|RSASSA_3072|RSASSA_4096|RSAPSS_2048|RSAPSS_3072|RSAPSS_4096|ECDSA_P256|ECDSA_P384|ECDSA_P521]
-         [--req_asym RSASSA_2048|RSASSA_3072|RSASSA_4096|RSAPSS_2048|RSAPSS_3072|RSAPSS_4096|ECDSA_P256|ECDSA_P384|ECDSA_P521]
-         [--dhe FFDHE_2048|FFDHE_3072|FFDHE_4096|SECP_256_R1|SECP_384_R1|SECP_521_R1]
-         [--aead AES_128_GCM|AES_256_GCM|CHACHA20_POLY1305]
+         [--meas_hash RAW_BIT|SHA_256|SHA_384|SHA_512|SHA3_256|SHA3_384|SHA3_512|SM3_256]
+         [--asym RSASSA_2048|RSASSA_3072|RSASSA_4096|RSAPSS_2048|RSAPSS_3072|RSAPSS_4096|ECDSA_P256|ECDSA_P384|ECDSA_P521|SM2_P256|EDDSA_25519|EDDSA_448]
+         [--req_asym RSASSA_2048|RSASSA_3072|RSASSA_4096|RSAPSS_2048|RSAPSS_3072|RSAPSS_4096|ECDSA_P256|ECDSA_P384|ECDSA_P521|SM2_P256|EDDSA_25519|EDDSA_448]
+         [--dhe FFDHE_2048|FFDHE_3072|FFDHE_4096|SECP_256_R1|SECP_384_R1|SECP_521_R1|SM2_P256]
+         [--aead AES_128_GCM|AES_256_GCM|CHACHA20_POLY1305|SM4_128_GCM]
          [--key_schedule HMAC_HASH]
+         [--other_param OPAQUE_FMT_1]
          [--req_cert_chain <input requester public cert chain file>]
          [--rsp_cert_chain <input responder public cert chain file>]
          [--out_req_cert_chain <output requester public cert chain file>]
@@ -48,7 +49,7 @@ This document describes spdm_dump tool. It can be used to parse the SPDM message
 
          [--req_cap] and [--rsp_cap] means requester capability flags and responder capability flags.
             Format: Capabilities can be multiple flags. Please use ',' for them.
-         [--hash], [--meas_spec], [--meas_hash], [--asym], [--req_asym], [--dhe], [--aead], [--key_schedule] means negotiated algorithms.
+         [--hash], [--meas_spec], [--meas_hash], [--asym], [--req_asym], [--dhe], [--aead], [--key_schedule], [--other_param] means negotiated algorithms.
             Format: Algorithms must include only one flag.
             Capabilities and algorithms are required if GET_CAPABILITIES or NEGOTIATE_ALGORITHMS is not sent.
                   For example, the negotiated state session or quick PSK session.
@@ -208,7 +209,7 @@ This document describes spdm_dump tool. It can be used to parse the SPDM message
 
 4. If GET_CAPABILITIES or NEGOTIATE_ALGORITHMS is not sent (e.g. when negotiated state is used or quick PSK path is used), the user need indicate the capabilities and algorithms to dump the rest data.
 
-   For example, `spdm_dump -r SpdmNegotiatedState.pcap --psk 5465737450736b4461746100 --dhe_secret c7ac17ee29b6a4f84e978223040b7eddff792477a6f7fc0f51faa553fee58175 --req_cap CERT,CHAL,ENCRYPT,MAC,MUT_AUTH,KEY_EX,PSK,ENCAP,HBEAT,KEY_UPD,HANDSHAKE_IN_CLEAR --rsp_cap CACHE,CERT,CHAL,MEAS_SIG,MEAS_FRESH,ENCRYPT,MAC,MUT_AUTH,KEY_EX,PSK_WITH_CONTEXT,ENCAP,HBEAT,KEY_UPD,HANDSHAKE_IN_CLEAR --hash SHA_384 --meas_spec DMTF --meas_hash SHA_512 --asym ECDSA_P384 --req_asym RSAPSS_3072 --dhe SECP_384_R1 --aead AES_256_GCM --key_schedule HMAC_HASH`
+   For example, `spdm_dump -r SpdmNegotiatedState.pcap --psk 5465737450736b4461746100 --dhe_secret c7ac17ee29b6a4f84e978223040b7eddff792477a6f7fc0f51faa553fee58175 --req_cap CERT,CHAL,ENCRYPT,MAC,MUT_AUTH,KEY_EX,PSK,ENCAP,HBEAT,KEY_UPD,HANDSHAKE_IN_CLEAR --rsp_cap CACHE,CERT,CHAL,MEAS_SIG,MEAS_FRESH,ENCRYPT,MAC,MUT_AUTH,KEY_EX,PSK_WITH_CONTEXT,ENCAP,HBEAT,KEY_UPD,HANDSHAKE_IN_CLEAR --hash SHA_384 --meas_spec DMTF --meas_hash SHA_512 --asym ECDSA_P384 --req_asym RSAPSS_3072 --dhe SECP_384_R1 --aead AES_256_GCM --key_schedule HMAC_HASH --other_param OPAQUE_FMT_1`
 
 5. By default, spdm_dump only displays SPDM messge. If you want to dump other application message, you need use `-d`.
 

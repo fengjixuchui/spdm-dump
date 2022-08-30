@@ -1,8 +1,8 @@
 /**
-    Copyright Notice:
-    Copyright 2021 DMTF. All rights reserved.
-    License: BSD 3-Clause License. For full text see link: https://github.com/DMTF/spdm-dump/blob/main/LICENSE.md
-**/
+ *  Copyright Notice:
+ *  Copyright 2021-2022 DMTF. All rights reserved.
+ *  License: BSD 3-Clause License. For full text see link: https://github.com/DMTF/spdm-dump/blob/main/LICENSE.md
+ **/
 
 #include "spdm_dump.h"
 
@@ -10,24 +10,24 @@ void *m_spdm_dec_message_buffer;
 void *m_spdm_context;
 
 void *m_spdm_last_message_buffer;
-uintn m_spdm_last_message_buffer_size;
+size_t m_spdm_last_message_buffer_size;
 uint8_t m_cached_get_measurement_request_attribute;
 uint8_t m_cached_get_measurement_operation;
 uint8_t m_cached_measurement_summary_hash_type;
 uint32_t m_cached_session_id;
 void *m_current_session_info;
 uint32_t m_current_session_id;
-boolean m_encapsulated;
-boolean m_decrypted;
+bool m_encapsulated;
+bool m_decrypted;
 
 void *m_spdm_cert_chain_buffer;
-uintn m_spdm_cert_chain_buffer_size;
-uintn m_cached_spdm_cert_chain_buffer_offset;
+size_t m_spdm_cert_chain_buffer_size;
+size_t m_cached_spdm_cert_chain_buffer_offset;
 
 void *m_local_used_cert_chain_buffer;
-uintn m_local_used_cert_chain_buffer_size;
+size_t m_local_used_cert_chain_buffer_size;
 void *m_peer_cert_chain_buffer;
-uintn m_peer_cert_chain_buffer_size;
+size_t m_peer_cert_chain_buffer_size;
 
 uint32_t m_spdm_requester_capabilities_flags;
 uint32_t m_spdm_responder_capabilities_flags;
@@ -39,6 +39,7 @@ uint16_t m_spdm_dhe_named_group;
 uint16_t m_spdm_aead_cipher_suite;
 uint16_t m_spdm_req_base_asym_alg;
 uint16_t m_spdm_key_schedule;
+uint8_t m_spdm_other_params_support;
 
 dispatch_table_entry_t m_spdm_vendor_dispatch[] = {
     { SPDM_REGISTRY_ID_DMTF, "DMTF", NULL },
@@ -66,9 +67,10 @@ value_string_entry_t m_spdm_requester_capabilities_string_table[] = {
     { SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HANDSHAKE_IN_THE_CLEAR_CAP,
       "HANDSHAKE_IN_CLEAR" },
     { SPDM_GET_CAPABILITIES_REQUEST_FLAGS_PUB_KEY_ID_CAP, "PUB_KEY_ID" },
+    { SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CHUNK_CAP, "CHUNK" },
 };
-uintn m_spdm_requester_capabilities_string_table_count =
-    ARRAY_SIZE(m_spdm_requester_capabilities_string_table);
+size_t m_spdm_requester_capabilities_string_table_count =
+    LIBSPDM_ARRAY_SIZE(m_spdm_requester_capabilities_string_table);
 
 value_string_entry_t m_spdm_responder_capabilities_string_table[] = {
     { SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_CACHE_CAP, "CACHE" },
@@ -90,9 +92,14 @@ value_string_entry_t m_spdm_responder_capabilities_string_table[] = {
     { SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_HANDSHAKE_IN_THE_CLEAR_CAP,
       "HANDSHAKE_IN_CLEAR" },
     { SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_PUB_KEY_ID_CAP, "PUB_KEY_ID" },
+    { SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_CHUNK_CAP, "CHUNK" },
+    { SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_ALIAS_CERT_CAP, "ALIAS_CERT" },
+    { SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_SET_CERT_CAP, "SET_CERT" },
+    { SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_CSR_CAP, "CSR" },
+    { SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_CERT_INSTALL_RESET_CAP, "CERT_INSTALL_RESET" },
 };
-uintn m_spdm_responder_capabilities_string_table_count =
-    ARRAY_SIZE(m_spdm_responder_capabilities_string_table);
+size_t m_spdm_responder_capabilities_string_table_count =
+    LIBSPDM_ARRAY_SIZE(m_spdm_responder_capabilities_string_table);
 
 value_string_entry_t m_spdm_hash_value_string_table[] = {
     { SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA_256, "SHA_256" },
@@ -101,9 +108,10 @@ value_string_entry_t m_spdm_hash_value_string_table[] = {
     { SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA3_256, "SHA3_256" },
     { SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA3_384, "SHA3_384" },
     { SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA3_512, "SHA3_512" },
+    { SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SM3_256, "SM3_256" },
 };
-uintn m_spdm_hash_value_string_table_count =
-    ARRAY_SIZE(m_spdm_hash_value_string_table);
+size_t m_spdm_hash_value_string_table_count =
+    LIBSPDM_ARRAY_SIZE(m_spdm_hash_value_string_table);
 
 value_string_entry_t m_spdm_measurement_hash_value_string_table[] = {
     { SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_RAW_BIT_STREAM_ONLY,
@@ -114,9 +122,10 @@ value_string_entry_t m_spdm_measurement_hash_value_string_table[] = {
     { SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA3_256, "SHA3_256" },
     { SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA3_384, "SHA3_384" },
     { SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA3_512, "SHA3_512" },
+    { SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SM3_256, "SM3_256" },
 };
-uintn m_spdm_measurement_hash_value_string_table_count =
-    ARRAY_SIZE(m_spdm_measurement_hash_value_string_table);
+size_t m_spdm_measurement_hash_value_string_table_count =
+    LIBSPDM_ARRAY_SIZE(m_spdm_measurement_hash_value_string_table);
 
 value_string_entry_t m_spdm_asym_value_string_table[] = {
     { SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_2048, "RSASSA_2048" },
@@ -131,9 +140,12 @@ value_string_entry_t m_spdm_asym_value_string_table[] = {
       "ECDSA_P384" },
     { SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P521,
       "ECDSA_P521" },
+    { SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_SM2_ECC_SM2_P256, "SM2_P256" },
+    { SPDM_ALGORITHMS_BASE_ASYM_ALGO_EDDSA_ED25519, "EDDSA_25519" },
+    { SPDM_ALGORITHMS_BASE_ASYM_ALGO_EDDSA_ED448, "EDDSA_448" },
 };
-uintn m_spdm_asym_value_string_table_count =
-    ARRAY_SIZE(m_spdm_asym_value_string_table);
+size_t m_spdm_asym_value_string_table_count =
+    LIBSPDM_ARRAY_SIZE(m_spdm_asym_value_string_table);
 
 value_string_entry_t m_spdm_dhe_value_string_table[] = {
     { SPDM_ALGORITHMS_DHE_NAMED_GROUP_FFDHE_2048, "FFDHE_2048" },
@@ -142,30 +154,38 @@ value_string_entry_t m_spdm_dhe_value_string_table[] = {
     { SPDM_ALGORITHMS_DHE_NAMED_GROUP_SECP_256_R1, "SECP_256_R1" },
     { SPDM_ALGORITHMS_DHE_NAMED_GROUP_SECP_384_R1, "SECP_384_R1" },
     { SPDM_ALGORITHMS_DHE_NAMED_GROUP_SECP_521_R1, "SECP_521_R1" },
+    { SPDM_ALGORITHMS_DHE_NAMED_GROUP_SM2_P256, "SM2_P256" },
 };
-uintn m_spdm_dhe_value_string_table_count =
-    ARRAY_SIZE(m_spdm_dhe_value_string_table);
+size_t m_spdm_dhe_value_string_table_count =
+    LIBSPDM_ARRAY_SIZE(m_spdm_dhe_value_string_table);
 
 value_string_entry_t m_spdm_aead_value_string_table[] = {
     { SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AES_128_GCM, "AES_128_GCM" },
     { SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AES_256_GCM, "AES_256_GCM" },
     { SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_CHACHA20_POLY1305,
       "CHACHA20_POLY1305" },
+    { SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AEAD_SM4_GCM, "SM4_128_GCM" },
 };
-uintn m_spdm_aead_value_string_table_count =
-    ARRAY_SIZE(m_spdm_aead_value_string_table);
+size_t m_spdm_aead_value_string_table_count =
+    LIBSPDM_ARRAY_SIZE(m_spdm_aead_value_string_table);
 
 value_string_entry_t m_spdm_key_schedule_value_string_table[] = {
     { SPDM_ALGORITHMS_KEY_SCHEDULE_HMAC_HASH, "HMAC_HASH" },
 };
-uintn m_spdm_key_schedule_value_string_table_count =
-    ARRAY_SIZE(m_spdm_key_schedule_value_string_table);
+size_t m_spdm_key_schedule_value_string_table_count =
+    LIBSPDM_ARRAY_SIZE(m_spdm_key_schedule_value_string_table);
 
 value_string_entry_t m_spdm_measurement_spec_value_string_table[] = {
     { SPDM_MEASUREMENT_BLOCK_HEADER_SPECIFICATION_DMTF, "DMTF" },
 };
-uintn m_spdm_measurement_spec_value_string_table_count =
-    ARRAY_SIZE(m_spdm_measurement_spec_value_string_table);
+size_t m_spdm_measurement_spec_value_string_table_count =
+    LIBSPDM_ARRAY_SIZE(m_spdm_measurement_spec_value_string_table);
+
+value_string_entry_t m_spdm_other_param_value_string_table[] = {
+    { SPDM_ALGORITHMS_OPAQUE_DATA_FORMAT_1, "OPAQUE_FMT_1" },
+};
+size_t m_spdm_other_param_value_string_table_count =
+    LIBSPDM_ARRAY_SIZE(m_spdm_other_param_value_string_table);
 
 value_string_entry_t m_spdm_measurement_type_value_string_table[] = {
     { SPDM_MEASUREMENT_BLOCK_MEASUREMENT_TYPE_IMMUTABLE_ROM,
@@ -178,6 +198,40 @@ value_string_entry_t m_spdm_measurement_type_value_string_table[] = {
       "FirmwareConfig" },
     { SPDM_MEASUREMENT_BLOCK_MEASUREMENT_TYPE_MEASUREMENT_MANIFEST,
       "Manifest" },
+    { SPDM_MEASUREMENT_BLOCK_MEASUREMENT_TYPE_DEVICE_MODE,
+      "DeviceMode" },
+    { SPDM_MEASUREMENT_BLOCK_MEASUREMENT_TYPE_VERSION,
+      "Version" },
+    { SPDM_MEASUREMENT_BLOCK_MEASUREMENT_TYPE_SECURE_VERSION_NUMBER,
+      "SVN" },
+};
+
+value_string_entry_t m_spdm_measurement_device_operation_mode_value_string_table[] = {
+    { SPDM_MEASUREMENT_DEVICE_OPERATION_MODE_MANUFACTURING_MODE,
+      "Mfg" },
+    { SPDM_MEASUREMENT_DEVICE_OPERATION_MODE_VALIDATION_MODE,
+      "Val" },
+    { SPDM_MEASUREMENT_DEVICE_OPERATION_MODE_NORMAL_MODE,
+      "Nor" },
+    { SPDM_MEASUREMENT_DEVICE_OPERATION_MODE_RECOVERY_MODE,
+      "Rec" },
+    { SPDM_MEASUREMENT_DEVICE_OPERATION_MODE_RMA_MODE,
+      "Rma" },
+    { SPDM_MEASUREMENT_DEVICE_OPERATION_MODE_DECOMMISSIONED_MODE,
+      "Dec" },
+};
+
+value_string_entry_t m_spdm_measurement_device_mode_value_string_table[] = {
+    { SPDM_MEASUREMENT_DEVICE_MODE_NON_INVASIVE_DEBUG_MODE_IS_ACTIVE,
+      "NonInvAct" },
+    { SPDM_MEASUREMENT_DEVICE_MODE_INVASIVE_DEBUG_MODE_IS_ACTIVE,
+      "InvAct" },
+    { SPDM_MEASUREMENT_DEVICE_MODE_NON_INVASIVE_DEBUG_MODE_HAS_BEEN_ACTIVE,
+      "NonInvBeenAct" },
+    { SPDM_MEASUREMENT_DEVICE_MODE_INVASIVE_DEBUG_MODE_HAS_BEEN_ACTIVE,
+      "InvBeenAct" },
+    { SPDM_MEASUREMENT_DEVICE_MODE_INVASIVE_DEBUG_MODE_HAS_BEEN_ACTIVE_AFTER_MFG,
+      "InvBeenActMfg" },
 };
 
 value_string_entry_t m_spdm_request_hash_type_string_table[] = {
@@ -189,11 +243,27 @@ value_string_entry_t m_spdm_request_hash_type_string_table[] = {
 value_string_entry_t m_spdm_measurement_attribute_string_table[] = {
     { SPDM_GET_MEASUREMENTS_REQUEST_ATTRIBUTES_GENERATE_SIGNATURE,
       "GenSig" },
+    { SPDM_GET_MEASUREMENTS_REQUEST_ATTRIBUTES_RAW_BIT_STREAM_REQUESTED,
+      "RawBitReq" },
+};
+
+value_string_entry_t m_spdm_measurement_content_change_string_table[] = {
+    { SPDM_MEASUREMENTS_RESPONSE_CONTENT_CHANGE_NO_DETECTION,
+      "NoCap" },
+    { SPDM_MEASUREMENTS_RESPONSE_CONTENT_CHANGE_DETECTED,
+      "Changed" },
+    { SPDM_MEASUREMENTS_RESPONSE_CONTENT_NO_CHANGE_DETECTED,
+      "NoChange" },
 };
 
 value_string_entry_t m_spdm_challenge_auth_attribute_string_table[] = {
     { SPDM_CHALLENGE_AUTH_RESPONSE_ATTRIBUTE_BASIC_MUT_AUTH_REQ,
       "BasicMutAuth" },
+};
+
+value_string_entry_t m_spdm_key_exchange_session_policy_string_table[] = {
+    { SPDM_KEY_EXCHANGE_REQUEST_SESSION_POLICY_TERMINATION_POLICY_RUNTIME_UPDATE,
+      "RuntimeUpdate" },
 };
 
 value_string_entry_t m_spdm_key_exchange_mut_auth_string_table[] = {
@@ -215,8 +285,18 @@ value_string_entry_t m_spdm_end_session_attribute_string_table[] = {
       "PreserveStateClear" },
 };
 
+value_string_entry_t m_spdm_chunk_send_attribute_string_table[] = {
+    { SPDM_CHUNK_SEND_REQUEST_ATTRIBUTE_LAST_CHUNK,
+      "LastChunk" },
+};
+
+value_string_entry_t m_spdm_chunk_send_ack_attribute_string_table[] = {
+    { SPDM_CHUNK_SEND_ACK_RESPONSE_ATTRIBUTE_EARLY_ERROR_DETECTED,
+      "EarlyErrorDetected" },
+};
+
 uint32_t spdm_dump_get_measurement_summary_hash_size(
-    IN uint8_t measurement_summary_hash_type)
+    uint8_t measurement_summary_hash_type)
 {
     /* Requester does not support measurement*/
     if (m_encapsulated) {
@@ -242,9 +322,9 @@ uint32_t spdm_dump_get_measurement_summary_hash_size(
     return 0;
 }
 
-void dump_spdm_get_version(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_get_version(const void *buffer, size_t buffer_size)
 {
-    uintn message_size;
+    size_t message_size;
 
     printf("SPDM_GET_VERSION ");
 
@@ -266,16 +346,16 @@ void dump_spdm_get_version(IN void *buffer, IN uintn buffer_size)
     libspdm_append_message_a(m_spdm_context, buffer, message_size);
 }
 
-void dump_spdm_version(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_version(const void *buffer, size_t buffer_size)
 {
-    uintn message_size;
-    spdm_version_response *spdm_response;
+    size_t message_size;
+    const spdm_version_response_t *spdm_response;
     spdm_version_number_t *spdm_version_number;
-    uintn index;
+    size_t index;
 
     printf("SPDM_VERSION ");
 
-    message_size = sizeof(spdm_version_response);
+    message_size = sizeof(spdm_version_response_t);
     if (buffer_size < message_size) {
         printf("\n");
         return;
@@ -283,7 +363,7 @@ void dump_spdm_version(IN void *buffer, IN uintn buffer_size)
 
     spdm_response = buffer;
     message_size += spdm_response->version_number_entry_count *
-            sizeof(spdm_version_number_t);
+                    sizeof(spdm_version_number_t);
     if (buffer_size < message_size) {
         printf("\n");
         return;
@@ -291,7 +371,7 @@ void dump_spdm_version(IN void *buffer, IN uintn buffer_size)
 
     if (!m_param_quite_mode) {
         spdm_version_number =
-            (void *)((uintn)buffer + sizeof(spdm_version_response));
+            (void *)((size_t)buffer + sizeof(spdm_version_response_t));
         printf("(");
         for (index = 0;
              index < spdm_response->version_number_entry_count;
@@ -300,10 +380,10 @@ void dump_spdm_version(IN void *buffer, IN uintn buffer_size)
                 printf(", ");
             }
             printf("%d.%d.%d.%d",
-                   spdm_version_number[index].major_version,
-                   spdm_version_number[index].minor_version,
-                   spdm_version_number[index].update_version_number,
-                   spdm_version_number[index].alpha);
+                   (spdm_version_number[index] >> 12) & 0xF,
+                   (spdm_version_number[index] >> 8) & 0xF,
+                   (spdm_version_number[index] >> 4) & 0xF,
+                   spdm_version_number[index] & 0xF);
         }
         printf(") ");
     }
@@ -312,15 +392,16 @@ void dump_spdm_version(IN void *buffer, IN uintn buffer_size)
     libspdm_append_message_a(m_spdm_context, buffer, message_size);
 }
 
-void dump_spdm_get_capabilities(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_get_capabilities(const void *buffer, size_t buffer_size)
 {
-    uintn message_size;
-    spdm_get_capabilities_request *spdm_request;
+    size_t message_size;
+    const spdm_get_capabilities_request_t *spdm_request;
     libspdm_data_parameter_t parameter;
+    spdm_version_number_t spdm_version;
 
     printf("SPDM_GET_CAPABILITIES ");
 
-    message_size = OFFSET_OF(spdm_get_capabilities_request, reserved);
+    message_size = offsetof(spdm_get_capabilities_request_t, reserved);
     if (buffer_size < message_size) {
         printf("\n");
         return;
@@ -329,7 +410,15 @@ void dump_spdm_get_capabilities(IN void *buffer, IN uintn buffer_size)
     spdm_request = buffer;
 
     if (spdm_request->header.spdm_version >= SPDM_MESSAGE_VERSION_11) {
-        message_size = sizeof(spdm_get_capabilities_request);
+        message_size = offsetof(spdm_get_capabilities_request_t, data_transfer_size);
+        if (buffer_size < message_size) {
+            printf("\n");
+            return;
+        }
+    }
+
+    if (spdm_request->header.spdm_version >= SPDM_MESSAGE_VERSION_12) {
+        message_size = sizeof(spdm_get_capabilities_request_t);
         if (buffer_size < message_size) {
             printf("\n");
             return;
@@ -339,14 +428,19 @@ void dump_spdm_get_capabilities(IN void *buffer, IN uintn buffer_size)
     if (!m_param_quite_mode) {
         if (spdm_request->header.spdm_version >=
             SPDM_MESSAGE_VERSION_11) {
-            printf("(Flags=0x%08x, CTExponent=0x%02x) ",
+            printf("(Flags=0x%08x, CTExponent=0x%02x",
                    spdm_request->flags, spdm_request->ct_exponent);
+            if (spdm_request->header.spdm_version >= SPDM_MESSAGE_VERSION_12) {
+                printf(", DataTransSize=0x%08x, MaxSpdmMsgSize=0x%08x",
+                       spdm_request->data_transfer_size, spdm_request->max_spdm_msg_size);
+            }
+            printf(") ");
 
             if (m_param_all_mode) {
                 printf("\n    Flags(");
                 dump_entry_flags_all(
                     m_spdm_requester_capabilities_string_table,
-                    ARRAY_SIZE(
+                    LIBSPDM_ARRAY_SIZE(
                         m_spdm_requester_capabilities_string_table),
                     spdm_request->flags);
                 printf(")");
@@ -358,28 +452,35 @@ void dump_spdm_get_capabilities(IN void *buffer, IN uintn buffer_size)
 
     printf("\n");
 
+    libspdm_zero_mem(&parameter, sizeof(parameter));
+    parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
+    spdm_version = (spdm_request->header.spdm_version << SPDM_VERSION_NUMBER_SHIFT_BIT);
+    libspdm_set_data(m_spdm_context, LIBSPDM_DATA_SPDM_VERSION,
+                     &parameter, &spdm_version,
+                     sizeof(spdm_version));
+
     if (spdm_request->header.spdm_version >= SPDM_MESSAGE_VERSION_11) {
         m_spdm_requester_capabilities_flags = spdm_request->flags;
 
-        zero_mem(&parameter, sizeof(parameter));
+        libspdm_zero_mem(&parameter, sizeof(parameter));
         parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
         libspdm_set_data(m_spdm_context, LIBSPDM_DATA_CAPABILITY_FLAGS,
-                  &parameter, &m_spdm_requester_capabilities_flags,
-                  sizeof(uint32_t));
+                         &parameter, &m_spdm_requester_capabilities_flags,
+                         sizeof(uint32_t));
     }
 
     libspdm_append_message_a(m_spdm_context, buffer, message_size);
 }
 
-void dump_spdm_capabilities(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_capabilities(const void *buffer, size_t buffer_size)
 {
-    uintn message_size;
-    spdm_capabilities_response *spdm_response;
+    size_t message_size;
+    const spdm_capabilities_response_t *spdm_response;
     libspdm_data_parameter_t parameter;
 
     printf("SPDM_CAPABILITIES ");
 
-    message_size = sizeof(spdm_capabilities_response);
+    message_size = offsetof(spdm_capabilities_response_t, data_transfer_size);
     if (buffer_size < message_size) {
         printf("\n");
         return;
@@ -387,15 +488,28 @@ void dump_spdm_capabilities(IN void *buffer, IN uintn buffer_size)
 
     spdm_response = buffer;
 
+    if (spdm_response->header.spdm_version >= SPDM_MESSAGE_VERSION_12) {
+        message_size = sizeof(spdm_capabilities_response_t);
+        if (buffer_size < message_size) {
+            printf("\n");
+            return;
+        }
+    }
+
     if (!m_param_quite_mode) {
-        printf("(Flags=0x%08x, CTExponent=0x%02x) ",
+        printf("(Flags=0x%08x, CTExponent=0x%02x",
                spdm_response->flags, spdm_response->ct_exponent);
+        if (spdm_response->header.spdm_version >= SPDM_MESSAGE_VERSION_12) {
+            printf(", DataTransSize=0x%08x, MaxSpdmMsgSize=0x%08x",
+                   spdm_response->data_transfer_size, spdm_response->max_spdm_msg_size);
+        }
+        printf(") ");
 
         if (m_param_all_mode) {
             printf("\n    Flags(");
             dump_entry_flags_all(
                 m_spdm_responder_capabilities_string_table,
-                ARRAY_SIZE(
+                LIBSPDM_ARRAY_SIZE(
                     m_spdm_responder_capabilities_string_table),
                 spdm_response->flags);
             printf(")");
@@ -406,19 +520,19 @@ void dump_spdm_capabilities(IN void *buffer, IN uintn buffer_size)
 
     m_spdm_responder_capabilities_flags = spdm_response->flags;
 
-    zero_mem(&parameter, sizeof(parameter));
+    libspdm_zero_mem(&parameter, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_CAPABILITY_FLAGS, &parameter,
-              &m_spdm_responder_capabilities_flags, sizeof(uint32_t));
+                     &m_spdm_responder_capabilities_flags, sizeof(uint32_t));
 
     libspdm_append_message_a(m_spdm_context, buffer, message_size);
 }
 
-void dump_spdm_negotiate_algorithms(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_negotiate_algorithms(const void *buffer, size_t buffer_size)
 {
-    uintn message_size;
-    spdm_negotiate_algorithms_request_t *spdm_request;
-    uintn index;
+    size_t message_size;
+    const spdm_negotiate_algorithms_request_t *spdm_request;
+    size_t index;
     spdm_negotiate_algorithms_common_struct_table_t *struct_table;
     uint8_t ext_alg_count;
 
@@ -433,11 +547,11 @@ void dump_spdm_negotiate_algorithms(IN void *buffer, IN uintn buffer_size)
     spdm_request = buffer;
     message_size +=
         spdm_request->ext_asym_count *
-            sizeof(spdm_extended_algorithm_t) +
+        sizeof(spdm_extended_algorithm_t) +
         spdm_request->ext_hash_count *
-            sizeof(spdm_extended_algorithm_t) +
+        sizeof(spdm_extended_algorithm_t) +
         spdm_request->header.param1 *
-            sizeof(spdm_negotiate_algorithms_common_struct_table_t);
+        sizeof(spdm_negotiate_algorithms_common_struct_table_t);
     if (buffer_size < message_size) {
         printf("\n");
         return;
@@ -448,25 +562,32 @@ void dump_spdm_negotiate_algorithms(IN void *buffer, IN uintn buffer_size)
                spdm_request->measurement_specification);
         dump_entry_flags(
             m_spdm_measurement_spec_value_string_table,
-            ARRAY_SIZE(m_spdm_measurement_spec_value_string_table),
+            LIBSPDM_ARRAY_SIZE(m_spdm_measurement_spec_value_string_table),
             spdm_request->measurement_specification);
-        printf("), hash=0x%08x(", spdm_request->base_hash_algo);
+        if (spdm_request->header.spdm_version >=
+            SPDM_MESSAGE_VERSION_12) {
+            printf("), OtherParam=0x%02x(", spdm_request->other_params_support);
+            dump_entry_flags(m_spdm_other_param_value_string_table,
+                             LIBSPDM_ARRAY_SIZE(m_spdm_other_param_value_string_table),
+                             spdm_request->other_params_support);
+        }
+        printf("), Hash=0x%08x(", spdm_request->base_hash_algo);
         dump_entry_flags(m_spdm_hash_value_string_table,
-                 ARRAY_SIZE(m_spdm_hash_value_string_table),
-                 spdm_request->base_hash_algo);
+                         LIBSPDM_ARRAY_SIZE(m_spdm_hash_value_string_table),
+                         spdm_request->base_hash_algo);
         printf("), Asym=0x%08x(", spdm_request->base_asym_algo);
         dump_entry_flags(m_spdm_asym_value_string_table,
-                 ARRAY_SIZE(m_spdm_asym_value_string_table),
-                 spdm_request->base_asym_algo);
+                         LIBSPDM_ARRAY_SIZE(m_spdm_asym_value_string_table),
+                         spdm_request->base_asym_algo);
 
         if (spdm_request->header.spdm_version >=
             SPDM_MESSAGE_VERSION_11) {
             struct_table =
-                (void *)((uintn)buffer +
-                     sizeof(spdm_negotiate_algorithms_request_t) +
-                     spdm_request->ext_asym_count *
+                (void *)((size_t)buffer +
+                         sizeof(spdm_negotiate_algorithms_request_t) +
+                         spdm_request->ext_asym_count *
                          sizeof(spdm_extended_algorithm_t) +
-                     spdm_request->ext_hash_count *
+                         spdm_request->ext_hash_count *
                          sizeof(spdm_extended_algorithm_t));
             for (index = 0; index < spdm_request->header.param1;
                  index++) {
@@ -476,7 +597,7 @@ void dump_spdm_negotiate_algorithms(IN void *buffer, IN uintn buffer_size)
                            struct_table->alg_supported);
                     dump_entry_flags(
                         m_spdm_dhe_value_string_table,
-                        ARRAY_SIZE(
+                        LIBSPDM_ARRAY_SIZE(
                             m_spdm_dhe_value_string_table),
                         struct_table->alg_supported);
                     break;
@@ -485,7 +606,7 @@ void dump_spdm_negotiate_algorithms(IN void *buffer, IN uintn buffer_size)
                            struct_table->alg_supported);
                     dump_entry_flags(
                         m_spdm_aead_value_string_table,
-                        ARRAY_SIZE(
+                        LIBSPDM_ARRAY_SIZE(
                             m_spdm_aead_value_string_table),
                         struct_table->alg_supported);
                     break;
@@ -494,25 +615,25 @@ void dump_spdm_negotiate_algorithms(IN void *buffer, IN uintn buffer_size)
                            struct_table->alg_supported);
                     dump_entry_flags(
                         m_spdm_asym_value_string_table,
-                        ARRAY_SIZE(
+                        LIBSPDM_ARRAY_SIZE(
                             m_spdm_asym_value_string_table),
                         struct_table->alg_supported);
                     break;
                 case SPDM_NEGOTIATE_ALGORITHMS_STRUCT_TABLE_ALG_TYPE_KEY_SCHEDULE:
-                    printf("), key_schedule=0x%04x(",
+                    printf("), KeySchedule=0x%04x(",
                            struct_table->alg_supported);
                     dump_entry_flags(
                         m_spdm_key_schedule_value_string_table,
-                        ARRAY_SIZE(
+                        LIBSPDM_ARRAY_SIZE(
                             m_spdm_key_schedule_value_string_table),
                         struct_table->alg_supported);
                     break;
                 }
                 ext_alg_count = struct_table->alg_count & 0xF;
                 struct_table =
-                    (void *)((uintn)struct_table +
-                         sizeof(spdm_negotiate_algorithms_common_struct_table_t) +
-                         sizeof(uint32_t) *
+                    (void *)((size_t)struct_table +
+                             sizeof(spdm_negotiate_algorithms_common_struct_table_t) +
+                             sizeof(uint32_t) *
                              ext_alg_count);
             }
         }
@@ -530,11 +651,11 @@ void dump_spdm_negotiate_algorithms(IN void *buffer, IN uintn buffer_size)
     libspdm_append_message_a(m_spdm_context, buffer, message_size);
 }
 
-void dump_spdm_algorithms(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_algorithms(const void *buffer, size_t buffer_size)
 {
-    uintn message_size;
-    spdm_algorithms_response_t *spdm_response;
-    uintn index;
+    size_t message_size;
+    const spdm_algorithms_response_t *spdm_response;
+    size_t index;
     spdm_negotiate_algorithms_common_struct_table_t *struct_table;
     libspdm_data_parameter_t parameter;
     uint8_t ext_alg_count;
@@ -550,11 +671,11 @@ void dump_spdm_algorithms(IN void *buffer, IN uintn buffer_size)
     spdm_response = buffer;
     message_size +=
         spdm_response->ext_asym_sel_count *
-            sizeof(spdm_extended_algorithm_t) +
+        sizeof(spdm_extended_algorithm_t) +
         spdm_response->ext_hash_sel_count *
-            sizeof(spdm_extended_algorithm_t) +
+        sizeof(spdm_extended_algorithm_t) +
         spdm_response->header.param1 *
-            sizeof(spdm_negotiate_algorithms_common_struct_table_t);
+        sizeof(spdm_negotiate_algorithms_common_struct_table_t);
     if (buffer_size < message_size) {
         printf("\n");
         return;
@@ -565,31 +686,38 @@ void dump_spdm_algorithms(IN void *buffer, IN uintn buffer_size)
                spdm_response->measurement_specification_sel);
         dump_entry_value(
             m_spdm_measurement_spec_value_string_table,
-            ARRAY_SIZE(m_spdm_measurement_spec_value_string_table),
+            LIBSPDM_ARRAY_SIZE(m_spdm_measurement_spec_value_string_table),
             spdm_response->measurement_specification_sel);
+        if (spdm_response->header.spdm_version >=
+            SPDM_MESSAGE_VERSION_12) {
+            printf("), OtherParam=0x%02x(", spdm_response->other_params_support);
+            dump_entry_value(m_spdm_other_param_value_string_table,
+                             LIBSPDM_ARRAY_SIZE(m_spdm_other_param_value_string_table),
+                             spdm_response->other_params_support);
+        }
         printf("), Hash=0x%08x(", spdm_response->base_hash_sel);
         dump_entry_value(m_spdm_hash_value_string_table,
-                 ARRAY_SIZE(m_spdm_hash_value_string_table),
-                 spdm_response->base_hash_sel);
+                         LIBSPDM_ARRAY_SIZE(m_spdm_hash_value_string_table),
+                         spdm_response->base_hash_sel);
         printf("), MeasHash=0x%08x(",
                spdm_response->measurement_hash_algo);
         dump_entry_value(
             m_spdm_measurement_hash_value_string_table,
-            ARRAY_SIZE(m_spdm_measurement_hash_value_string_table),
+            LIBSPDM_ARRAY_SIZE(m_spdm_measurement_hash_value_string_table),
             spdm_response->measurement_hash_algo);
         printf("), Asym=0x%08x(", spdm_response->base_asym_sel);
         dump_entry_value(m_spdm_asym_value_string_table,
-                 ARRAY_SIZE(m_spdm_asym_value_string_table),
-                 spdm_response->base_asym_sel);
+                         LIBSPDM_ARRAY_SIZE(m_spdm_asym_value_string_table),
+                         spdm_response->base_asym_sel);
 
         if (spdm_response->header.spdm_version >=
             SPDM_MESSAGE_VERSION_11) {
             struct_table =
-                (void *)((uintn)buffer +
-                     sizeof(spdm_algorithms_response_t) +
-                     spdm_response->ext_asym_sel_count *
+                (void *)((size_t)buffer +
+                         sizeof(spdm_algorithms_response_t) +
+                         spdm_response->ext_asym_sel_count *
                          sizeof(spdm_extended_algorithm_t) +
-                     spdm_response->ext_hash_sel_count *
+                         spdm_response->ext_hash_sel_count *
                          sizeof(spdm_extended_algorithm_t));
             for (index = 0; index < spdm_response->header.param1;
                  index++) {
@@ -599,7 +727,7 @@ void dump_spdm_algorithms(IN void *buffer, IN uintn buffer_size)
                            struct_table->alg_supported);
                     dump_entry_value(
                         m_spdm_dhe_value_string_table,
-                        ARRAY_SIZE(
+                        LIBSPDM_ARRAY_SIZE(
                             m_spdm_dhe_value_string_table),
                         struct_table->alg_supported);
                     break;
@@ -608,7 +736,7 @@ void dump_spdm_algorithms(IN void *buffer, IN uintn buffer_size)
                            struct_table->alg_supported);
                     dump_entry_value(
                         m_spdm_aead_value_string_table,
-                        ARRAY_SIZE(
+                        LIBSPDM_ARRAY_SIZE(
                             m_spdm_aead_value_string_table),
                         struct_table->alg_supported);
                     break;
@@ -617,7 +745,7 @@ void dump_spdm_algorithms(IN void *buffer, IN uintn buffer_size)
                            struct_table->alg_supported);
                     dump_entry_value(
                         m_spdm_asym_value_string_table,
-                        ARRAY_SIZE(
+                        LIBSPDM_ARRAY_SIZE(
                             m_spdm_asym_value_string_table),
                         struct_table->alg_supported);
                     break;
@@ -626,16 +754,16 @@ void dump_spdm_algorithms(IN void *buffer, IN uintn buffer_size)
                            struct_table->alg_supported);
                     dump_entry_value(
                         m_spdm_key_schedule_value_string_table,
-                        ARRAY_SIZE(
+                        LIBSPDM_ARRAY_SIZE(
                             m_spdm_key_schedule_value_string_table),
                         struct_table->alg_supported);
                     break;
                 }
                 ext_alg_count = struct_table->alg_count & 0xF;
                 struct_table =
-                    (void *)((uintn)struct_table +
-                         sizeof(spdm_negotiate_algorithms_common_struct_table_t) +
-                         sizeof(uint32_t) *
+                    (void *)((size_t)struct_table +
+                             sizeof(spdm_negotiate_algorithms_common_struct_table_t) +
+                             sizeof(uint32_t) *
                              ext_alg_count);
             }
         }
@@ -657,11 +785,11 @@ void dump_spdm_algorithms(IN void *buffer, IN uintn buffer_size)
 
     if (spdm_response->header.spdm_version >= SPDM_MESSAGE_VERSION_11) {
         struct_table =
-            (void *)((uintn)buffer +
-                 sizeof(spdm_algorithms_response_t) +
-                 spdm_response->ext_asym_sel_count *
+            (void *)((size_t)buffer +
+                     sizeof(spdm_algorithms_response_t) +
+                     spdm_response->ext_asym_sel_count *
                      sizeof(spdm_extended_algorithm_t) +
-                 spdm_response->ext_hash_sel_count *
+                     spdm_response->ext_hash_sel_count *
                      sizeof(spdm_extended_algorithm_t));
         for (index = 0; index < spdm_response->header.param1; index++) {
             switch (struct_table->alg_type) {
@@ -684,38 +812,44 @@ void dump_spdm_algorithms(IN void *buffer, IN uintn buffer_size)
             }
             ext_alg_count = struct_table->alg_count & 0xF;
             struct_table =
-                (void *)((uintn)struct_table +
-                     sizeof(spdm_negotiate_algorithms_common_struct_table_t) +
-                     sizeof(uint32_t) * ext_alg_count);
+                (void *)((size_t)struct_table +
+                         sizeof(spdm_negotiate_algorithms_common_struct_table_t) +
+                         sizeof(uint32_t) * ext_alg_count);
         }
     }
 
-    zero_mem(&parameter, sizeof(parameter));
+    if (spdm_response->header.spdm_version >= SPDM_MESSAGE_VERSION_12) {
+        m_spdm_other_params_support = spdm_response->other_params_support;
+    }
+
+    libspdm_zero_mem(&parameter, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_MEASUREMENT_SPEC, &parameter,
-              &m_spdm_measurement_spec, sizeof(uint8_t));
+                     &m_spdm_measurement_spec, sizeof(uint8_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_MEASUREMENT_HASH_ALGO,
-              &parameter, &m_spdm_measurement_hash_algo,
-              sizeof(uint32_t));
+                     &parameter, &m_spdm_measurement_hash_algo,
+                     sizeof(uint32_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_BASE_ASYM_ALGO, &parameter,
-              &m_spdm_base_asym_algo, sizeof(uint32_t));
+                     &m_spdm_base_asym_algo, sizeof(uint32_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_BASE_HASH_ALGO, &parameter,
-              &m_spdm_base_hash_algo, sizeof(uint32_t));
+                     &m_spdm_base_hash_algo, sizeof(uint32_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_DHE_NAME_GROUP, &parameter,
-              &m_spdm_dhe_named_group, sizeof(uint16_t));
+                     &m_spdm_dhe_named_group, sizeof(uint16_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_AEAD_CIPHER_SUITE, &parameter,
-              &m_spdm_aead_cipher_suite, sizeof(uint16_t));
+                     &m_spdm_aead_cipher_suite, sizeof(uint16_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_REQ_BASE_ASYM_ALG, &parameter,
-              &m_spdm_req_base_asym_alg, sizeof(uint16_t));
+                     &m_spdm_req_base_asym_alg, sizeof(uint16_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_KEY_SCHEDULE, &parameter,
-              &m_spdm_key_schedule, sizeof(uint16_t));
+                     &m_spdm_key_schedule, sizeof(uint16_t));
+    libspdm_set_data(m_spdm_context, LIBSPDM_DATA_OTHER_PARAMS_SUPPORT, &parameter,
+                     &m_spdm_other_params_support, sizeof(uint8_t));
 
     libspdm_append_message_a(m_spdm_context, buffer, message_size);
 }
 
-void dump_spdm_get_digests(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_get_digests(const void *buffer, size_t buffer_size)
 {
-    uintn message_size;
+    size_t message_size;
 
     printf("SPDM_GET_DIGESTS ");
 
@@ -732,13 +866,13 @@ void dump_spdm_get_digests(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_digests(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_digests(const void *buffer, size_t buffer_size)
 {
-    spdm_digest_response_t *spdm_response;
-    uintn message_size;
-    uintn hash_size;
-    uintn slot_count;
-    uintn index;
+    const spdm_digest_response_t *spdm_response;
+    size_t message_size;
+    size_t hash_size;
+    size_t slot_count;
+    size_t index;
     uint8_t *digest;
 
     printf("SPDM_DIGESTS ");
@@ -783,10 +917,10 @@ void dump_spdm_digests(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_get_certificate(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_get_certificate(const void *buffer, size_t buffer_size)
 {
-    spdm_get_certificate_request_t *spdm_request;
-    uintn message_size;
+    const spdm_get_certificate_request_t *spdm_request;
+    size_t message_size;
 
     printf("SPDM_GET_CERTIFICATE ");
 
@@ -809,13 +943,13 @@ void dump_spdm_get_certificate(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_certificate(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_certificate(const void *buffer, size_t buffer_size)
 {
-    spdm_certificate_response_t *spdm_response;
-    uintn message_size;
+    const spdm_certificate_response_t *spdm_response;
+    size_t message_size;
     void *cert_chain;
-    uintn cert_chain_size;
-    uintn hash_size;
+    size_t cert_chain_size;
+    size_t hash_size;
     spdm_cert_chain_t *spdm_cert_chain;
     uint8_t *root_hash;
 
@@ -842,16 +976,17 @@ void dump_spdm_certificate(IN void *buffer, IN uintn buffer_size)
     }
 
     if (m_cached_spdm_cert_chain_buffer_offset +
-            spdm_response->portion_length >
+        spdm_response->portion_length >
         LIBSPDM_MAX_CERT_CHAIN_SIZE) {
-        printf("SPDM cert_chain is too larger. Please increase LIBSPDM_MAX_CERT_CHAIN_SIZE and rebuild.\n");
+        printf(
+            "SPDM cert_chain is too larger. Please increase LIBSPDM_MAX_CERT_CHAIN_SIZE and rebuild.\n");
         exit(0);
     }
     memcpy((uint8_t *)m_spdm_cert_chain_buffer +
-               m_cached_spdm_cert_chain_buffer_offset,
+           m_cached_spdm_cert_chain_buffer_offset,
            (spdm_response + 1), spdm_response->portion_length);
     m_spdm_cert_chain_buffer_size = m_cached_spdm_cert_chain_buffer_offset +
-                    spdm_response->portion_length;
+                                    spdm_response->portion_length;
 
     hash_size = libspdm_get_hash_size(m_spdm_base_hash_algo);
 
@@ -882,8 +1017,8 @@ void dump_spdm_certificate(IN void *buffer, IN uintn buffer_size)
                 printf(")");
 
                 cert_chain = (uint8_t *)m_spdm_cert_chain_buffer +
-                         sizeof(spdm_cert_chain_t) +
-                         hash_size;
+                             sizeof(spdm_cert_chain_t) +
+                             hash_size;
                 cert_chain_size =
                     m_spdm_cert_chain_buffer_size -
                     (sizeof(spdm_cert_chain_t) + hash_size);
@@ -942,10 +1077,10 @@ void dump_spdm_certificate(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_challenge(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_challenge(const void *buffer, size_t buffer_size)
 {
-    spdm_challenge_request_t *spdm_request;
-    uintn message_size;
+    const spdm_challenge_request_t *spdm_request;
+    size_t message_size;
 
     printf("SPDM_CHALLENGE ");
 
@@ -965,7 +1100,7 @@ void dump_spdm_challenge(IN void *buffer, IN uintn buffer_size)
                spdm_request->header.param2);
         dump_entry_value(
             m_spdm_request_hash_type_string_table,
-            ARRAY_SIZE(m_spdm_request_hash_type_string_table),
+            LIBSPDM_ARRAY_SIZE(m_spdm_request_hash_type_string_table),
             spdm_request->header.param2);
         printf(")) ");
 
@@ -979,13 +1114,13 @@ void dump_spdm_challenge(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_challenge_auth(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_challenge_auth(const void *buffer, size_t buffer_size)
 {
-    spdm_challenge_auth_response_t *spdm_response;
-    uintn message_size;
-    uintn hash_size;
-    uintn measurement_summary_hash_size;
-    uintn signature_size;
+    const spdm_challenge_auth_response_t *spdm_response;
+    size_t message_size;
+    size_t hash_size;
+    size_t measurement_summary_hash_size;
+    size_t signature_size;
     uint16_t opaque_length;
     uint8_t *cert_chain_hash;
     uint8_t *nonce;
@@ -1002,16 +1137,16 @@ void dump_spdm_challenge_auth(IN void *buffer, IN uintn buffer_size)
             m_cached_measurement_summary_hash_type);
 
     message_size = sizeof(spdm_challenge_auth_response_t) + hash_size + 32 +
-               measurement_summary_hash_size + sizeof(uint16_t);
+                   measurement_summary_hash_size + sizeof(uint16_t);
     if (buffer_size < message_size) {
         printf("\n");
         return;
     }
 
     opaque_length =
-        *(uint16_t *)((uintn)buffer +
-                sizeof(spdm_challenge_auth_response_t) + hash_size +
-                32 + measurement_summary_hash_size);
+        *(uint16_t *)((size_t)buffer +
+                      sizeof(spdm_challenge_auth_response_t) + hash_size +
+                      32 + measurement_summary_hash_size);
     message_size += opaque_length + signature_size;
     if (buffer_size < message_size) {
         printf("\n");
@@ -1024,7 +1159,7 @@ void dump_spdm_challenge_auth(IN void *buffer, IN uintn buffer_size)
         printf("(Attr=0x%02x(", spdm_response->header.param1);
         dump_entry_flags(
             m_spdm_challenge_auth_attribute_string_table,
-            ARRAY_SIZE(
+            LIBSPDM_ARRAY_SIZE(
                 m_spdm_challenge_auth_attribute_string_table),
             spdm_response->header.param1 & 0xF0);
         printf(", SlotID=0x%02x), SlotMask=0x%02x) ",
@@ -1044,19 +1179,20 @@ void dump_spdm_challenge_auth(IN void *buffer, IN uintn buffer_size)
             if (measurement_summary_hash_size != 0) {
                 printf("\n    MeasurementSummaryHash(");
                 dump_data(measurement_summary_hash,
-                      measurement_summary_hash_size);
+                          measurement_summary_hash_size);
                 printf(")");
             }
             opaque_length =
                 *(uint16_t *)(measurement_summary_hash +
-                        measurement_summary_hash_size);
+                              measurement_summary_hash_size);
             opaque_data = measurement_summary_hash +
-                      measurement_summary_hash_size +
-                      sizeof(uint16_t);
+                          measurement_summary_hash_size +
+                          sizeof(uint16_t);
             printf("\n    OpaqueData(");
             dump_data(opaque_data, opaque_length);
             printf(")");
-            dump_spdm_opaque_data(opaque_data, opaque_length);
+            dump_spdm_opaque_data(spdm_response->header.spdm_version,
+                                  opaque_data, opaque_length);
             signature = opaque_data + opaque_length;
             printf("\n    Signature(");
             dump_data(signature, signature_size);
@@ -1067,15 +1203,15 @@ void dump_spdm_challenge_auth(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_get_measurements(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_get_measurements(const void *buffer, size_t buffer_size)
 {
-    spdm_get_measurements_request_t *spdm_request;
-    uintn message_size;
-    boolean include_signature;
+    const spdm_get_measurements_request_t *spdm_request;
+    size_t message_size;
+    bool include_signature;
 
     printf("SPDM_GET_MEASUREMENTS ");
 
-    message_size = OFFSET_OF(spdm_get_measurements_request_t, nonce);
+    message_size = offsetof(spdm_get_measurements_request_t, nonce);
     if (buffer_size < message_size) {
         printf("\n");
         return;
@@ -1091,8 +1227,8 @@ void dump_spdm_get_measurements(IN void *buffer, IN uintn buffer_size)
             SPDM_MESSAGE_VERSION_11) {
             message_size = sizeof(spdm_get_measurements_request_t);
         } else {
-            message_size = OFFSET_OF(
-                spdm_get_measurements_request_t, SlotIDParam);
+            message_size = offsetof(
+                spdm_get_measurements_request_t, slot_id_param);
         }
     }
     if (buffer_size < message_size) {
@@ -1108,7 +1244,7 @@ void dump_spdm_get_measurements(IN void *buffer, IN uintn buffer_size)
         printf("(Attr=0x%02x(", spdm_request->header.param1);
         dump_entry_flags(
             m_spdm_measurement_attribute_string_table,
-            ARRAY_SIZE(m_spdm_measurement_attribute_string_table),
+            LIBSPDM_ARRAY_SIZE(m_spdm_measurement_attribute_string_table),
             spdm_request->header.param1);
         printf("), MeasOp=0x%02x", spdm_request->header.param2);
         switch (spdm_request->header.param2) {
@@ -1120,8 +1256,8 @@ void dump_spdm_get_measurements(IN void *buffer, IN uintn buffer_size)
             break;
         }
         if (include_signature && (spdm_request->header.spdm_version >=
-                      SPDM_MESSAGE_VERSION_11)) {
-            printf(", SlotID=0x%02x", spdm_request->SlotIDParam);
+                                  SPDM_MESSAGE_VERSION_11)) {
+            printf(", SlotID=0x%02x", spdm_request->slot_id_param);
         }
         printf(") ");
 
@@ -1137,94 +1273,143 @@ void dump_spdm_get_measurements(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_measurements_record(IN uint8_t number_of_blocks,
-                   IN void *measurement_record,
-                   IN uint32_t measurement_record_length)
+void dump_spdm_measurements_record(uint8_t number_of_blocks,
+                                   const void *measurement_record,
+                                   uint32_t measurement_record_length)
 {
     spdm_measurement_block_dmtf_t *dmtf_block;
-    uintn index;
-    uintn end_of_block;
-    uintn end_of_record;
+    size_t index;
+    size_t end_of_block;
+    size_t end_of_record;
 
-    end_of_record = (uintn)measurement_record + measurement_record_length;
+    end_of_record = (size_t)measurement_record + measurement_record_length;
 
     dmtf_block = (void *)measurement_record;
     for (index = 0; index < number_of_blocks; index++) {
-        if ((uintn)dmtf_block + sizeof(spdm_measurement_block_dmtf_t) >
+        if ((size_t)dmtf_block + sizeof(spdm_measurement_block_dmtf_t) >
             end_of_record) {
             break;
         }
-        if (dmtf_block->Measurement_block_common_header
-                .measurement_specification !=
+        if (dmtf_block->measurement_block_common_header
+            .measurement_specification !=
             SPDM_MEASUREMENT_BLOCK_HEADER_SPECIFICATION_DMTF) {
             break;
         }
-        if (dmtf_block->Measurement_block_common_header
-                .measurement_size !=
-            dmtf_block->Measurement_block_dmtf_header
-                    .dmtf_spec_measurement_value_size +
-                sizeof(spdm_measurement_block_dmtf_header_t)) {
+        if (dmtf_block->measurement_block_common_header
+            .measurement_size !=
+            dmtf_block->measurement_block_dmtf_header
+            .dmtf_spec_measurement_value_size +
+            sizeof(spdm_measurement_block_dmtf_header_t)) {
             break;
         }
-        end_of_block = (uintn)dmtf_block +
-                   dmtf_block->Measurement_block_common_header
+        end_of_block = (size_t)dmtf_block +
+                       dmtf_block->measurement_block_common_header
                        .measurement_size +
-                   sizeof(spdm_measurement_block_common_header_t);
+                       sizeof(spdm_measurement_block_common_header_t);
         if (end_of_block > end_of_record) {
             break;
         }
 
         printf("\n      MeasurementRecord_%d(", (uint32_t)index);
         printf("\n        CommonHeader(Index=0x%02x, MeasSpec=0x%02x(",
-               dmtf_block->Measurement_block_common_header.index,
-               dmtf_block->Measurement_block_common_header
-                   .measurement_specification);
+               dmtf_block->measurement_block_common_header.index,
+               dmtf_block->measurement_block_common_header
+               .measurement_specification);
         dump_entry_flags(
             m_spdm_measurement_spec_value_string_table,
-            ARRAY_SIZE(m_spdm_measurement_spec_value_string_table),
-            dmtf_block->Measurement_block_common_header
-                .measurement_specification);
+            LIBSPDM_ARRAY_SIZE(m_spdm_measurement_spec_value_string_table),
+            dmtf_block->measurement_block_common_header
+            .measurement_specification);
         printf("), size=0x%04x)",
-               dmtf_block->Measurement_block_common_header
-                   .measurement_size);
+               dmtf_block->measurement_block_common_header
+               .measurement_size);
 
         printf("\n        DmtfHeader(Type=0x%02x(",
-               dmtf_block->Measurement_block_dmtf_header
-                   .dmtf_spec_measurement_value_type);
+               dmtf_block->measurement_block_dmtf_header
+               .dmtf_spec_measurement_value_type);
         dump_entry_value(
             m_spdm_measurement_type_value_string_table,
-            ARRAY_SIZE(m_spdm_measurement_type_value_string_table),
-            dmtf_block->Measurement_block_dmtf_header
-                    .dmtf_spec_measurement_value_type &
-                SPDM_MEASUREMENT_BLOCK_MEASUREMENT_TYPE_MASK);
-        if (dmtf_block->Measurement_block_dmtf_header
-                .dmtf_spec_measurement_value_type &
+            LIBSPDM_ARRAY_SIZE(m_spdm_measurement_type_value_string_table),
+            dmtf_block->measurement_block_dmtf_header
+            .dmtf_spec_measurement_value_type &
+            SPDM_MEASUREMENT_BLOCK_MEASUREMENT_TYPE_MASK);
+        if (dmtf_block->measurement_block_dmtf_header
+            .dmtf_spec_measurement_value_type &
             SPDM_MEASUREMENT_BLOCK_MEASUREMENT_TYPE_RAW_BIT_STREAM) {
             printf(", RawBitStream");
         }
         printf("), Size=0x%04x)",
-               dmtf_block->Measurement_block_dmtf_header
-                   .dmtf_spec_measurement_value_size);
+               dmtf_block->measurement_block_dmtf_header
+               .dmtf_spec_measurement_value_size);
 
         printf("\n        Value(");
         dump_data((void *)(dmtf_block + 1),
-              dmtf_block->Measurement_block_dmtf_header
+                  dmtf_block->measurement_block_dmtf_header
                   .dmtf_spec_measurement_value_size);
         printf(")");
+
+        switch (dmtf_block->measurement_block_dmtf_header
+                .dmtf_spec_measurement_value_type) {
+        case (SPDM_MEASUREMENT_BLOCK_MEASUREMENT_TYPE_SECURE_VERSION_NUMBER |
+              SPDM_MEASUREMENT_BLOCK_MEASUREMENT_TYPE_RAW_BIT_STREAM):
+            if (dmtf_block->measurement_block_dmtf_header
+                .dmtf_spec_measurement_value_size ==
+                sizeof(spdm_measurements_secure_version_number_t)) {
+                spdm_measurements_secure_version_number_t svn;
+                libspdm_copy_mem((void *)&svn, sizeof(svn), (void *)(dmtf_block + 1), sizeof(svn));
+                printf("\n          Svn(0x%08x%08x)", (uint32_t)(svn >> 32), (uint32_t)svn);
+            }
+            break;
+        case (SPDM_MEASUREMENT_BLOCK_MEASUREMENT_TYPE_DEVICE_MODE |
+              SPDM_MEASUREMENT_BLOCK_MEASUREMENT_TYPE_RAW_BIT_STREAM):
+            if (dmtf_block->measurement_block_dmtf_header
+                .dmtf_spec_measurement_value_size ==
+                sizeof(spdm_measurements_device_mode_t)) {
+                spdm_measurements_device_mode_t device_mode;
+                libspdm_copy_mem((void *)&device_mode, sizeof(device_mode),
+                                 (void *)(dmtf_block + 1), sizeof(device_mode));
+                printf("\n          DeviceMode(OpCap=0x%08x(",
+                       device_mode.operational_mode_capabilties);
+                dump_entry_flags(
+                    m_spdm_measurement_device_operation_mode_value_string_table,
+                    LIBSPDM_ARRAY_SIZE(m_spdm_measurement_device_operation_mode_value_string_table),
+                    device_mode.operational_mode_capabilties);
+                printf("), OpStat=0x%08x(", device_mode.operational_mode_state);
+                dump_entry_flags(
+                    m_spdm_measurement_device_operation_mode_value_string_table,
+                    LIBSPDM_ARRAY_SIZE(m_spdm_measurement_device_operation_mode_value_string_table),
+                    device_mode.operational_mode_state);
+                printf("), ModCap=0x%08x(", device_mode.device_mode_capabilties);
+                dump_entry_flags(
+                    m_spdm_measurement_device_mode_value_string_table,
+                    LIBSPDM_ARRAY_SIZE(m_spdm_measurement_device_mode_value_string_table),
+                    device_mode.device_mode_capabilties);
+                printf("), ModStat=0x%08x(", device_mode.device_mode_state);
+                dump_entry_flags(
+                    m_spdm_measurement_device_mode_value_string_table,
+                    LIBSPDM_ARRAY_SIZE(m_spdm_measurement_device_mode_value_string_table),
+                    device_mode.device_mode_state);
+                printf("))");
+            }
+            break;
+        default:
+            break;
+        }
+
         printf("\n        )");
 
         dmtf_block = (void *)end_of_block;
     }
 }
 
-void dump_spdm_measurements(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_measurements(const void *buffer, size_t buffer_size)
 {
-    spdm_measurements_response_t *spdm_response;
-    uintn message_size;
+    const spdm_measurements_response_t *spdm_response;
+    size_t message_size;
     uint32_t measurement_record_length;
-    uintn signature_size;
+    size_t signature_size;
     uint16_t opaque_length;
-    boolean include_signature;
+    bool include_signature;
     uint8_t *measurement_record;
     uint8_t *nonce;
     uint8_t *opaque_data;
@@ -1264,9 +1449,9 @@ void dump_spdm_measurements(IN void *buffer, IN uintn buffer_size)
         }
 
         opaque_length =
-            *(uint16_t *)((uintn)buffer +
-                    sizeof(spdm_measurements_response_t) +
-                    measurement_record_length + 32);
+            *(uint16_t *)((size_t)buffer +
+                          sizeof(spdm_measurements_response_t) +
+                          measurement_record_length + 32);
         message_size += opaque_length + signature_size;
         if (buffer_size < message_size) {
             printf("\n");
@@ -1280,8 +1465,20 @@ void dump_spdm_measurements(IN void *buffer, IN uintn buffer_size)
             printf("(TotalMeasIndex=0x%02x",
                    spdm_response->header.param1);
             if (include_signature) {
+                if (spdm_response->header.spdm_version >= SPDM_MESSAGE_VERSION_12) {
+                    printf(", ContentChange=0x%02x(",
+                           spdm_response->header.param2 &
+                           SPDM_MEASUREMENTS_RESPONSE_CONTENT_CHANGE_MASK);
+                    dump_entry_value(
+                        m_spdm_measurement_content_change_string_table,
+                        LIBSPDM_ARRAY_SIZE(
+                            m_spdm_measurement_content_change_string_table),
+                        spdm_response->header.param2 &
+                        SPDM_MEASUREMENTS_RESPONSE_CONTENT_CHANGE_MASK);
+                    printf(")");
+                }
                 printf(", SlotID=0x%02x",
-                       spdm_response->header.param2);
+                       spdm_response->header.param2 & 0xF);
             }
             printf(") ");
         } else {
@@ -1289,8 +1486,20 @@ void dump_spdm_measurements(IN void *buffer, IN uintn buffer_size)
                    spdm_response->number_of_blocks,
                    measurement_record_length);
             if (include_signature) {
+                if (spdm_response->header.spdm_version >= SPDM_MESSAGE_VERSION_12) {
+                    printf(", ContentChange=0x%02x(",
+                           spdm_response->header.param2 &
+                           SPDM_MEASUREMENTS_RESPONSE_CONTENT_CHANGE_MASK);
+                    dump_entry_value(
+                        m_spdm_measurement_content_change_string_table,
+                        LIBSPDM_ARRAY_SIZE(
+                            m_spdm_measurement_content_change_string_table),
+                        spdm_response->header.param2 &
+                        SPDM_MEASUREMENTS_RESPONSE_CONTENT_CHANGE_MASK);
+                    printf(")");
+                }
                 printf(", SlotID=0x%02x",
-                       spdm_response->header.param2);
+                       spdm_response->header.param2 & 0xF);
             }
             printf(") ");
         }
@@ -1301,7 +1510,7 @@ void dump_spdm_measurements(IN void *buffer, IN uintn buffer_size)
                 SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_TOTAL_NUMBER_OF_MEASUREMENTS) {
                 printf("\n    MeasurementRecord(");
                 dump_data(measurement_record,
-                      measurement_record_length);
+                          measurement_record_length);
                 printf(")");
 
                 dump_spdm_measurements_record(
@@ -1311,7 +1520,7 @@ void dump_spdm_measurements(IN void *buffer, IN uintn buffer_size)
             }
             if (include_signature) {
                 nonce = measurement_record +
-                    measurement_record_length;
+                        measurement_record_length;
                 printf("\n    Nonce(");
                 dump_data(nonce, 32);
                 printf(")");
@@ -1320,15 +1529,15 @@ void dump_spdm_measurements(IN void *buffer, IN uintn buffer_size)
                 printf("\n    OpaqueData(");
                 dump_data(opaque_data, opaque_length);
                 printf(")");
-                dump_spdm_opaque_data(opaque_data,
-                              opaque_length);
+                dump_spdm_opaque_data(spdm_response->header.spdm_version,
+                                      opaque_data, opaque_length);
                 signature = opaque_data + opaque_length;
                 printf("\n    Signature(");
                 dump_data(signature, signature_size);
                 printf(")");
             } else {
                 nonce = measurement_record +
-                    measurement_record_length;
+                        measurement_record_length;
                 printf("\n    Nonce(");
                 dump_data(nonce, 32);
                 printf(")");
@@ -1337,8 +1546,8 @@ void dump_spdm_measurements(IN void *buffer, IN uintn buffer_size)
                 printf("\n    OpaqueData(");
                 dump_data(opaque_data, opaque_length);
                 printf(")");
-                dump_spdm_opaque_data(opaque_data,
-                              opaque_length);
+                dump_spdm_opaque_data(spdm_response->header.spdm_version,
+                                      opaque_data, opaque_length);
             }
         }
     }
@@ -1346,9 +1555,9 @@ void dump_spdm_measurements(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_respond_if_ready(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_respond_if_ready(const void *buffer, size_t buffer_size)
 {
-    spdm_response_if_ready_request_t *spdm_request;
+    const spdm_response_if_ready_request_t *spdm_request;
 
     printf("SPDM_RESPOND_IF_READY ");
     if (buffer_size < sizeof(spdm_response_if_ready_request_t)) {
@@ -1367,9 +1576,9 @@ void dump_spdm_respond_if_ready(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_error(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_error(const void *buffer, size_t buffer_size)
 {
-    spdm_error_response_t *spdm_response;
+    const spdm_error_response_t *spdm_response;
 
     printf("SPDM_ERROR ");
 
@@ -1389,19 +1598,19 @@ void dump_spdm_error(IN void *buffer, IN uintn buffer_size)
             SPDM_ERROR_CODE_RESPONSE_NOT_READY) {
             if (buffer_size >=
                 sizeof(spdm_error_response_data_response_not_ready_t)) {
-                spdm_error_response_data_response_not_ready_t
-                    *spdm_responseNotReady;
+                const spdm_error_response_data_response_not_ready_t
+                *spdm_responseNotReady;
 
                 spdm_responseNotReady = buffer;
                 printf("(ReqCode=0x%02x, Token=0x%02x, RDTExponent=0x%02x, RDTM=0x%02x) ",
                        spdm_responseNotReady->extend_error_data
-                           .request_code,
+                       .request_code,
                        spdm_responseNotReady->extend_error_data
-                           .token,
+                       .token,
                        spdm_responseNotReady->extend_error_data
-                           .rd_exponent,
+                       .rd_exponent,
                        spdm_responseNotReady->extend_error_data
-                           .rd_tm);
+                       .rd_tm);
             }
         }
     }
@@ -1413,10 +1622,10 @@ void dump_spdm_error(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_vendor_defined_request(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_vendor_defined_request(const void *buffer, size_t buffer_size)
 {
-    spdm_vendor_defined_request_msg_t *spdm_request;
-    uintn header_size;
+    const spdm_vendor_defined_request_msg_t *spdm_request;
+    size_t header_size;
 
     printf("SPDM_VENDOR_DEFINED_REQUEST ");
 
@@ -1424,7 +1633,7 @@ void dump_spdm_vendor_defined_request(IN void *buffer, IN uintn buffer_size)
         printf("\n");
         return;
     }
-    header_size = OFFSET_OF(spdm_vendor_defined_request_msg_t, standard_id);
+    header_size = offsetof(spdm_vendor_defined_request_msg_t, standard_id);
 
     spdm_request = buffer;
 
@@ -1434,19 +1643,19 @@ void dump_spdm_vendor_defined_request(IN void *buffer, IN uintn buffer_size)
 
     if (m_param_dump_vendor_app) {
         dump_dispatch_message(m_spdm_vendor_dispatch,
-                      ARRAY_SIZE(m_spdm_vendor_dispatch),
-                      spdm_request->standard_id,
-                      (uint8_t *)buffer + header_size,
-                      buffer_size - header_size);
+                              LIBSPDM_ARRAY_SIZE(m_spdm_vendor_dispatch),
+                              spdm_request->standard_id,
+                              (uint8_t *)buffer + header_size,
+                              buffer_size - header_size);
     } else {
         printf("\n");
     }
 }
 
-void dump_spdm_vendor_defined_response(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_vendor_defined_response(const void *buffer, size_t buffer_size)
 {
-    spdm_vendor_defined_response_msg_t *spdm_response;
-    uintn header_size;
+    const spdm_vendor_defined_response_msg_t *spdm_response;
+    size_t header_size;
 
     printf("SPDM_VENDOR_DEFINED_RESPONSE ");
 
@@ -1454,7 +1663,7 @@ void dump_spdm_vendor_defined_response(IN void *buffer, IN uintn buffer_size)
         printf("\n");
         return;
     }
-    header_size = OFFSET_OF(spdm_vendor_defined_request_msg_t, standard_id);
+    header_size = offsetof(spdm_vendor_defined_request_msg_t, standard_id);
 
     spdm_response = buffer;
 
@@ -1464,20 +1673,20 @@ void dump_spdm_vendor_defined_response(IN void *buffer, IN uintn buffer_size)
 
     if (m_param_dump_vendor_app) {
         dump_dispatch_message(m_spdm_vendor_dispatch,
-                      ARRAY_SIZE(m_spdm_vendor_dispatch),
-                      spdm_response->standard_id,
-                      (uint8_t *)buffer + header_size,
-                      buffer_size - header_size);
+                              LIBSPDM_ARRAY_SIZE(m_spdm_vendor_dispatch),
+                              spdm_response->standard_id,
+                              (uint8_t *)buffer + header_size,
+                              buffer_size - header_size);
     } else {
         printf("\n");
     }
 }
 
-void dump_spdm_key_exchange(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_key_exchange(const void *buffer, size_t buffer_size)
 {
-    spdm_key_exchange_request_t *spdm_request;
-    uintn message_size;
-    uintn dhe_key_size;
+    const spdm_key_exchange_request_t *spdm_request;
+    size_t message_size;
+    size_t dhe_key_size;
     uint16_t opaque_length;
     uint8_t *exchange_data;
     uint8_t *opaque_data;
@@ -1499,8 +1708,8 @@ void dump_spdm_key_exchange(IN void *buffer, IN uintn buffer_size)
     }
 
     opaque_length =
-        *(uint16_t *)((uintn)buffer +
-                sizeof(spdm_key_exchange_request_t) + dhe_key_size);
+        *(uint16_t *)((size_t)buffer +
+                      sizeof(spdm_key_exchange_request_t) + dhe_key_size);
     message_size += opaque_length;
     if (buffer_size < message_size) {
         printf("\n");
@@ -1513,11 +1722,21 @@ void dump_spdm_key_exchange(IN void *buffer, IN uintn buffer_size)
         printf("(HashType=0x%02x(", spdm_request->header.param1);
         dump_entry_value(
             m_spdm_request_hash_type_string_table,
-            ARRAY_SIZE(m_spdm_request_hash_type_string_table),
+            LIBSPDM_ARRAY_SIZE(m_spdm_request_hash_type_string_table),
             spdm_request->header.param1);
-        printf("), SlotID=0x%02x, ReqSessionID=0x%04x) ",
+        printf("), SlotID=0x%02x, ReqSessionID=0x%04x",
                spdm_request->header.param2,
                spdm_request->req_session_id);
+        if (spdm_request->header.spdm_version >= SPDM_MESSAGE_VERSION_12) {
+            printf(", Policy=0x%02x(",
+                   spdm_request->session_policy);
+            dump_entry_flags(
+                m_spdm_key_exchange_session_policy_string_table,
+                LIBSPDM_ARRAY_SIZE(m_spdm_key_exchange_session_policy_string_table),
+                spdm_request->session_policy);
+            printf(")");
+        }
+        printf(") ");
 
         if (m_param_all_mode) {
             printf("\n    RandomData(");
@@ -1528,13 +1747,14 @@ void dump_spdm_key_exchange(IN void *buffer, IN uintn buffer_size)
             dump_data(exchange_data, dhe_key_size);
             printf(")");
             opaque_length = *(uint16_t *)((uint8_t *)exchange_data +
-                            dhe_key_size);
+                                          dhe_key_size);
             opaque_data = (void *)((uint8_t *)exchange_data +
-                           dhe_key_size + sizeof(uint16_t));
+                                   dhe_key_size + sizeof(uint16_t));
             printf("\n    OpaqueData(");
             dump_data(opaque_data, opaque_length);
             printf(")");
-            dump_spdm_opaque_data(opaque_data, opaque_length);
+            dump_spdm_opaque_data(spdm_request->header.spdm_version,
+                                  opaque_data, opaque_length);
         }
     }
 
@@ -1545,16 +1765,16 @@ void dump_spdm_key_exchange(IN void *buffer, IN uintn buffer_size)
     m_spdm_last_message_buffer_size = message_size;
 }
 
-void dump_spdm_key_exchange_rsp(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_key_exchange_rsp(const void *buffer, size_t buffer_size)
 {
-    spdm_key_exchange_response_t *spdm_response;
-    uintn message_size;
-    uintn dhe_key_size;
-    uintn measurement_summary_hash_size;
-    uintn signature_size;
-    uintn hmac_size;
+    const spdm_key_exchange_response_t *spdm_response;
+    size_t message_size;
+    size_t dhe_key_size;
+    size_t measurement_summary_hash_size;
+    size_t signature_size;
+    size_t hmac_size;
     uint16_t opaque_length;
-    boolean include_hmac;
+    bool include_hmac;
     uint8_t *exchange_data;
     uint8_t *measurement_summary_hash;
     uint8_t *opaque_data;
@@ -1588,8 +1808,8 @@ void dump_spdm_key_exchange_rsp(IN void *buffer, IN uintn buffer_size)
     }
 
     opaque_length = *(
-        uint16_t *)((uintn)buffer + sizeof(spdm_key_exchange_response_t) +
-              dhe_key_size + measurement_summary_hash_size);
+        uint16_t *)((size_t)buffer + sizeof(spdm_key_exchange_response_t) +
+                    dhe_key_size + measurement_summary_hash_size);
     message_size += opaque_length + signature_size;
     include_hmac =
         ((m_spdm_responder_capabilities_flags &
@@ -1613,7 +1833,7 @@ void dump_spdm_key_exchange_rsp(IN void *buffer, IN uintn buffer_size)
                spdm_response->mut_auth_requested);
         dump_entry_flags(
             m_spdm_key_exchange_mut_auth_string_table,
-            ARRAY_SIZE(m_spdm_key_exchange_mut_auth_string_table),
+            LIBSPDM_ARRAY_SIZE(m_spdm_key_exchange_mut_auth_string_table),
             spdm_response->mut_auth_requested);
         printf("), ReqSlotID=0x%02x) ",
                spdm_response->req_slot_id_param);
@@ -1630,20 +1850,21 @@ void dump_spdm_key_exchange_rsp(IN void *buffer, IN uintn buffer_size)
             if (measurement_summary_hash_size != 0) {
                 printf("\n    MeasurementSummaryHash(");
                 dump_data(measurement_summary_hash,
-                      measurement_summary_hash_size);
+                          measurement_summary_hash_size);
                 printf(")");
             }
             opaque_length =
                 *(uint16_t *)((uint8_t *)measurement_summary_hash +
-                        measurement_summary_hash_size);
+                              measurement_summary_hash_size);
             opaque_data =
                 (void *)((uint8_t *)measurement_summary_hash +
-                     measurement_summary_hash_size +
-                     sizeof(uint16_t));
+                         measurement_summary_hash_size +
+                         sizeof(uint16_t));
             printf("\n    OpaqueData(");
             dump_data(opaque_data, opaque_length);
             printf(")");
-            dump_spdm_opaque_data(opaque_data, opaque_length);
+            dump_spdm_opaque_data(spdm_response->header.spdm_version,
+                                  opaque_data, opaque_length);
             signature = opaque_data + opaque_length;
             printf("\n    Signature(");
             dump_data(signature, signature_size);
@@ -1663,57 +1884,57 @@ void dump_spdm_key_exchange_rsp(IN void *buffer, IN uintn buffer_size)
         m_cached_session_id | spdm_response->rsp_session_id;
     /* double check if current is occupied*/
     if (libspdm_get_session_info_via_session_id(m_spdm_context,
-                         m_cached_session_id) != NULL) {
+                                                m_cached_session_id) != NULL) {
         /* this might happen if a session is terminated without EndSession*/
         libspdm_free_session_id(m_spdm_context, m_cached_session_id);
     }
     m_current_session_info = libspdm_assign_session_id(
-        m_spdm_context, m_cached_session_id, FALSE);
-    ASSERT(m_current_session_info != NULL);
+        m_spdm_context, m_cached_session_id, false);
+    LIBSPDM_ASSERT(m_current_session_info != NULL);
     if (m_current_session_info == NULL) {
         return;
     }
     m_current_session_id = m_cached_session_id;
 
     mut_auth_requested = spdm_response->mut_auth_requested;
-    zero_mem(&parameter, sizeof(parameter));
+    libspdm_zero_mem(&parameter, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_SESSION;
     *(uint32_t *)parameter.additional_data = m_current_session_id;
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_SESSION_MUT_AUTH_REQUESTED,
-              &parameter, &mut_auth_requested,
-              sizeof(mut_auth_requested));
+                     &parameter, &mut_auth_requested,
+                     sizeof(mut_auth_requested));
 
     if (spdm_dump_session_data_provision(m_spdm_context,
-                         m_current_session_id, FALSE,
-                         TRUE) != RETURN_SUCCESS) {
+                                         m_current_session_id, false,
+                                         true) != LIBSPDM_STATUS_SUCCESS) {
         return;
     }
 
     hmac_size = libspdm_get_hash_size(m_spdm_base_hash_algo);
-    libspdm_append_message_k(m_spdm_context, m_current_session_info, TRUE,
-                  m_spdm_last_message_buffer,
-                  m_spdm_last_message_buffer_size);
+    libspdm_append_message_k(m_spdm_context, m_current_session_info, true,
+                             m_spdm_last_message_buffer,
+                             m_spdm_last_message_buffer_size);
     if (include_hmac) {
-        libspdm_append_message_k(m_spdm_context, m_current_session_info, TRUE, buffer,
-                      message_size - hmac_size);
+        libspdm_append_message_k(m_spdm_context, m_current_session_info, true, buffer,
+                                 message_size - hmac_size);
     } else {
-        libspdm_append_message_k(m_spdm_context, m_current_session_info, TRUE, buffer,
-                      message_size);
+        libspdm_append_message_k(m_spdm_context, m_current_session_info, true, buffer,
+                                 message_size);
     }
 
-    DEBUG((DEBUG_INFO, "libspdm_generate_session_handshake_key[%x]\n",
-           m_current_session_id));
+    LIBSPDM_DEBUG((LIBSPDM_DEBUG_INFO, "libspdm_generate_session_handshake_key[%x]\n",
+                   m_current_session_id));
 
-    libspdm_calculate_th1_hash(m_spdm_context, m_current_session_info, TRUE,
-                th1_hash_data);
+    libspdm_calculate_th1_hash(m_spdm_context, m_current_session_info, true,
+                               th1_hash_data);
     libspdm_generate_session_handshake_key(
         libspdm_get_secured_message_context_via_session_info(
             m_current_session_info),
         th1_hash_data);
     if (include_hmac) {
         libspdm_append_message_k(m_spdm_context,
-            m_current_session_info, TRUE,
-            (uint8_t *)buffer + message_size - hmac_size, hmac_size);
+                                 m_current_session_info, true,
+                                 (uint8_t *)buffer + message_size - hmac_size, hmac_size);
     }
 
     libspdm_secured_message_set_session_state(
@@ -1722,13 +1943,13 @@ void dump_spdm_key_exchange_rsp(IN void *buffer, IN uintn buffer_size)
         LIBSPDM_SESSION_STATE_HANDSHAKING);
 }
 
-void dump_spdm_finish(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_finish(const void *buffer, size_t buffer_size)
 {
-    spdm_finish_request_t *spdm_request;
-    uintn message_size;
-    uintn signature_size;
-    uintn hmac_size;
-    boolean include_signature;
+    const spdm_finish_request_t *spdm_request;
+    size_t message_size;
+    size_t signature_size;
+    size_t hmac_size;
+    bool include_signature;
     uint8_t *signature;
     uint8_t *verify_data;
 
@@ -1761,10 +1982,10 @@ void dump_spdm_finish(IN void *buffer, IN uintn buffer_size)
         printf("(Attr=0x%02x (SigIncl=%x), ReqSlotID=0x%02x) ",
                spdm_request->header.param1,
                ((spdm_request->header.param1 &
-             SPDM_FINISH_REQUEST_ATTRIBUTES_SIGNATURE_INCLUDED) !=
-            0) ?
-                   1 :
-                   0,
+                 SPDM_FINISH_REQUEST_ATTRIBUTES_SIGNATURE_INCLUDED) !=
+                0) ?
+               1 :
+               0,
                spdm_request->header.param2);
 
         if (m_param_all_mode) {
@@ -1785,17 +2006,17 @@ void dump_spdm_finish(IN void *buffer, IN uintn buffer_size)
 
     printf("\n");
 
-    ASSERT(m_current_session_info != NULL);
+    LIBSPDM_ASSERT(m_current_session_info != NULL);
     memcpy(m_spdm_last_message_buffer, buffer, message_size);
     m_spdm_last_message_buffer_size = message_size;
 }
 
-void dump_spdm_finish_rsp(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_finish_rsp(const void *buffer, size_t buffer_size)
 {
-    spdm_finish_response_t *spdm_response;
-    uintn message_size;
-    uintn hmac_size;
-    boolean include_hmac;
+    const spdm_finish_response_t *spdm_response;
+    size_t message_size;
+    size_t hmac_size;
+    bool include_hmac;
     uint8_t *verify_data;
     uint8_t th2_hash_data[64];
 
@@ -1840,31 +2061,31 @@ void dump_spdm_finish_rsp(IN void *buffer, IN uintn buffer_size)
 
     printf("\n");
 
-    ASSERT(m_current_session_info != NULL);
+    LIBSPDM_ASSERT(m_current_session_info != NULL);
     if (m_current_session_info == NULL) {
         return;
     }
 
     if (spdm_dump_session_data_provision(m_spdm_context,
-                         m_current_session_id, TRUE,
-                         TRUE) != RETURN_SUCCESS) {
+                                         m_current_session_id, true,
+                                         true) != LIBSPDM_STATUS_SUCCESS) {
         return;
     }
 
-    libspdm_append_message_f(m_spdm_context, m_current_session_info, TRUE,
-                  m_spdm_last_message_buffer,
-                  m_spdm_last_message_buffer_size);
-    libspdm_append_message_f(m_spdm_context, m_current_session_info, TRUE, buffer, message_size);
+    libspdm_append_message_f(m_spdm_context, m_current_session_info, true,
+                             m_spdm_last_message_buffer,
+                             m_spdm_last_message_buffer_size);
+    libspdm_append_message_f(m_spdm_context, m_current_session_info, true, buffer, message_size);
 
-    DEBUG((DEBUG_INFO, "libspdm_generate_session_data_key[%x]\n",
-           m_current_session_id));
+    LIBSPDM_DEBUG((LIBSPDM_DEBUG_INFO, "libspdm_generate_session_data_key[%x]\n",
+                   m_current_session_id));
 
     if (spdm_dump_session_data_check(m_spdm_context, m_current_session_id,
-                     TRUE) != RETURN_SUCCESS) {
+                                     true) != LIBSPDM_STATUS_SUCCESS) {
         return;
     }
-    libspdm_calculate_th2_hash(m_spdm_context, m_current_session_info, TRUE,
-                th2_hash_data);
+    libspdm_calculate_th2_hash(m_spdm_context, m_current_session_info, true,
+                               th2_hash_data);
     libspdm_generate_session_data_key(
         libspdm_get_secured_message_context_via_session_info(
             m_current_session_info),
@@ -1875,10 +2096,10 @@ void dump_spdm_finish_rsp(IN void *buffer, IN uintn buffer_size)
         LIBSPDM_SESSION_STATE_ESTABLISHED);
 }
 
-void dump_spdm_psk_exchange(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_psk_exchange(const void *buffer, size_t buffer_size)
 {
-    spdm_psk_exchange_request_t *spdm_request;
-    uintn message_size;
+    const spdm_psk_exchange_request_t *spdm_request;
+    size_t message_size;
     uint8_t *psk_hint;
     uint8_t *context;
     uint8_t *opaque_data;
@@ -1893,8 +2114,8 @@ void dump_spdm_psk_exchange(IN void *buffer, IN uintn buffer_size)
 
     spdm_request = buffer;
     message_size += spdm_request->psk_hint_length +
-            spdm_request->context_length +
-            spdm_request->opaque_length;
+                    spdm_request->context_length +
+                    spdm_request->opaque_length;
     if (buffer_size < message_size) {
         printf("\n");
         return;
@@ -1906,10 +2127,20 @@ void dump_spdm_psk_exchange(IN void *buffer, IN uintn buffer_size)
         printf("(HashType=0x%02x(", spdm_request->header.param1);
         dump_entry_value(
             m_spdm_request_hash_type_string_table,
-            ARRAY_SIZE(m_spdm_request_hash_type_string_table),
+            LIBSPDM_ARRAY_SIZE(m_spdm_request_hash_type_string_table),
             spdm_request->header.param1);
-        printf("), ReqSessionID=0x%04x, PSKHint=",
+        printf("), ReqSessionID=0x%04x",
                spdm_request->req_session_id);
+        if (spdm_request->header.spdm_version >= SPDM_MESSAGE_VERSION_12) {
+            printf(", Policy=0x%02x(",
+                   spdm_request->header.param2);
+            dump_entry_flags(
+                m_spdm_key_exchange_session_policy_string_table,
+                LIBSPDM_ARRAY_SIZE(m_spdm_key_exchange_session_policy_string_table),
+                spdm_request->header.param2);
+            printf(")");
+        }
+        printf(", PSKHint=");
         psk_hint = (void *)(spdm_request + 1);
         dump_hex_str(psk_hint, spdm_request->psk_hint_length);
         printf(") ");
@@ -1923,8 +2154,8 @@ void dump_spdm_psk_exchange(IN void *buffer, IN uintn buffer_size)
             printf("\n    OpaqueData(");
             dump_data(opaque_data, spdm_request->opaque_length);
             printf(")");
-            dump_spdm_opaque_data(opaque_data,
-                          spdm_request->opaque_length);
+            dump_spdm_opaque_data(spdm_request->header.spdm_version,
+                                  opaque_data, spdm_request->opaque_length);
         }
     }
 
@@ -1935,12 +2166,12 @@ void dump_spdm_psk_exchange(IN void *buffer, IN uintn buffer_size)
     m_spdm_last_message_buffer_size = message_size;
 }
 
-void dump_spdm_psk_exchange_rsp(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_psk_exchange_rsp(const void *buffer, size_t buffer_size)
 {
-    spdm_psk_exchange_response_t *spdm_response;
-    uintn message_size;
-    uintn measurement_summary_hash_size;
-    uintn hmac_size;
+    const spdm_psk_exchange_response_t *spdm_response;
+    size_t message_size;
+    size_t measurement_summary_hash_size;
+    size_t hmac_size;
     uint8_t *measurement_summary_hash;
     uint8_t *context;
     uint8_t *opaque_data;
@@ -1948,7 +2179,7 @@ void dump_spdm_psk_exchange_rsp(IN void *buffer, IN uintn buffer_size)
     uint8_t th1_hash_data[64];
     uint8_t th2_hash_data[64];
     libspdm_data_parameter_t parameter;
-    boolean use_psk;
+    bool use_psk;
 
     printf("SPDM_PSK_EXCHANGE_RSP ");
 
@@ -1964,8 +2195,8 @@ void dump_spdm_psk_exchange_rsp(IN void *buffer, IN uintn buffer_size)
             m_cached_measurement_summary_hash_type);
     hmac_size = libspdm_get_hash_size(m_spdm_base_hash_algo);
     message_size += measurement_summary_hash_size +
-            spdm_response->context_length +
-            spdm_response->opaque_length + hmac_size;
+                    spdm_response->context_length +
+                    spdm_response->opaque_length + hmac_size;
     if (buffer_size < message_size) {
         printf("\n");
         return;
@@ -1981,11 +2212,11 @@ void dump_spdm_psk_exchange_rsp(IN void *buffer, IN uintn buffer_size)
             if (measurement_summary_hash_size != 0) {
                 printf("\n    MeasurementSummaryHash(");
                 dump_data(measurement_summary_hash,
-                      measurement_summary_hash_size);
+                          measurement_summary_hash_size);
                 printf(")");
             }
             context = measurement_summary_hash +
-                  measurement_summary_hash_size;
+                      measurement_summary_hash_size;
             printf("\n    Context(");
             dump_data(context, spdm_response->context_length);
             printf(")");
@@ -1993,8 +2224,8 @@ void dump_spdm_psk_exchange_rsp(IN void *buffer, IN uintn buffer_size)
             printf("\n    OpaqueData(");
             dump_data(opaque_data, spdm_response->opaque_length);
             printf(")");
-            dump_spdm_opaque_data(opaque_data,
-                          spdm_response->opaque_length);
+            dump_spdm_opaque_data(spdm_response->header.spdm_version,
+                                  opaque_data, spdm_response->opaque_length);
             verify_data =
                 opaque_data + spdm_response->opaque_length;
             printf("\n    VerifyData(");
@@ -2009,66 +2240,66 @@ void dump_spdm_psk_exchange_rsp(IN void *buffer, IN uintn buffer_size)
         m_cached_session_id | spdm_response->rsp_session_id;
     /* double check if current is occupied*/
     if (libspdm_get_session_info_via_session_id(m_spdm_context,
-                         m_cached_session_id) != NULL) {
+                                                m_cached_session_id) != NULL) {
         /* this might happen if a session is terminated without EndSession*/
         libspdm_free_session_id(m_spdm_context, m_cached_session_id);
     }
     m_current_session_info = libspdm_assign_session_id(
-        m_spdm_context, m_cached_session_id, TRUE);
-    ASSERT(m_current_session_info != NULL);
+        m_spdm_context, m_cached_session_id, true);
+    LIBSPDM_ASSERT(m_current_session_info != NULL);
     if (m_current_session_info == NULL) {
         return;
     }
     m_current_session_id = m_cached_session_id;
 
     if (spdm_dump_session_data_provision(m_spdm_context,
-                         m_current_session_id, FALSE,
-                         TRUE) != RETURN_SUCCESS) {
+                                         m_current_session_id, false,
+                                         true) != LIBSPDM_STATUS_SUCCESS) {
         return;
     }
 
-    libspdm_append_message_k(m_spdm_context, m_current_session_info, TRUE,
-                  m_spdm_last_message_buffer,
-                  m_spdm_last_message_buffer_size);
-    libspdm_append_message_k(m_spdm_context, m_current_session_info, TRUE, buffer,
-                  message_size - hmac_size);
+    libspdm_append_message_k(m_spdm_context, m_current_session_info, true,
+                             m_spdm_last_message_buffer,
+                             m_spdm_last_message_buffer_size);
+    libspdm_append_message_k(m_spdm_context, m_current_session_info, true, buffer,
+                             message_size - hmac_size);
 
-    DEBUG((DEBUG_INFO, "libspdm_generate_session_handshake_key[%x]\n",
-           m_current_session_id));
+    LIBSPDM_DEBUG((LIBSPDM_DEBUG_INFO, "libspdm_generate_session_handshake_key[%x]\n",
+                   m_current_session_id));
 
-    libspdm_calculate_th1_hash(m_spdm_context, m_current_session_info, TRUE,
-                th1_hash_data);
+    libspdm_calculate_th1_hash(m_spdm_context, m_current_session_info, true,
+                               th1_hash_data);
     libspdm_secured_message_set_use_psk(
         libspdm_get_secured_message_context_via_session_info(
             m_current_session_info),
-        FALSE);
+        false);
 
-    use_psk = FALSE;
-    zero_mem(&parameter, sizeof(parameter));
+    use_psk = false;
+    libspdm_zero_mem(&parameter, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_SESSION;
     *(uint32_t *)parameter.additional_data = m_current_session_id;
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_SESSION_USE_PSK, &parameter,
-              &use_psk, sizeof(use_psk));
+                     &use_psk, sizeof(use_psk));
 
     libspdm_generate_session_handshake_key(
         libspdm_get_secured_message_context_via_session_info(
             m_current_session_info),
         th1_hash_data);
 
-    use_psk = TRUE;
-    zero_mem(&parameter, sizeof(parameter));
+    use_psk = true;
+    libspdm_zero_mem(&parameter, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_SESSION;
     *(uint32_t *)parameter.additional_data = m_current_session_id;
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_SESSION_USE_PSK, &parameter,
-              &use_psk, sizeof(use_psk));
+                     &use_psk, sizeof(use_psk));
 
     libspdm_secured_message_set_use_psk(
         libspdm_get_secured_message_context_via_session_info(
             m_current_session_info),
-        TRUE);
-    libspdm_append_message_k(m_spdm_context, m_current_session_info, TRUE,
-                  (uint8_t *)buffer + message_size - hmac_size,
-                  hmac_size);
+        true);
+    libspdm_append_message_k(m_spdm_context, m_current_session_info, true,
+                             (uint8_t *)buffer + message_size - hmac_size,
+                             hmac_size);
 
     libspdm_secured_message_set_session_state(
         libspdm_get_secured_message_context_via_session_info(
@@ -2081,35 +2312,35 @@ void dump_spdm_psk_exchange_rsp(IN void *buffer, IN uintn buffer_size)
         /* No need to receive PSK_FINISH, enter application phase directly.*/
 
         libspdm_calculate_th2_hash(m_spdm_context, m_current_session_info,
-                    TRUE, th2_hash_data);
+                                   true, th2_hash_data);
         libspdm_secured_message_set_use_psk(
             libspdm_get_secured_message_context_via_session_info(
                 m_current_session_info),
-            FALSE);
+            false);
 
-        use_psk = FALSE;
-        zero_mem(&parameter, sizeof(parameter));
+        use_psk = false;
+        libspdm_zero_mem(&parameter, sizeof(parameter));
         parameter.location = LIBSPDM_DATA_LOCATION_SESSION;
         *(uint32_t *)parameter.additional_data = m_current_session_id;
         libspdm_set_data(m_spdm_context, LIBSPDM_DATA_SESSION_USE_PSK,
-                  &parameter, &use_psk, sizeof(use_psk));
+                         &parameter, &use_psk, sizeof(use_psk));
 
         libspdm_generate_session_data_key(
             libspdm_get_secured_message_context_via_session_info(
                 m_current_session_info),
             th2_hash_data);
 
-        use_psk = TRUE;
-        zero_mem(&parameter, sizeof(parameter));
+        use_psk = true;
+        libspdm_zero_mem(&parameter, sizeof(parameter));
         parameter.location = LIBSPDM_DATA_LOCATION_SESSION;
         *(uint32_t *)parameter.additional_data = m_current_session_id;
         libspdm_set_data(m_spdm_context, LIBSPDM_DATA_SESSION_USE_PSK,
-                  &parameter, &use_psk, sizeof(use_psk));
+                         &parameter, &use_psk, sizeof(use_psk));
 
         libspdm_secured_message_set_use_psk(
             libspdm_get_secured_message_context_via_session_info(
                 m_current_session_info),
-            TRUE);
+            true);
         libspdm_secured_message_set_session_state(
             libspdm_get_secured_message_context_via_session_info(
                 m_current_session_info),
@@ -2117,11 +2348,11 @@ void dump_spdm_psk_exchange_rsp(IN void *buffer, IN uintn buffer_size)
     }
 }
 
-void dump_spdm_psk_finish(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_psk_finish(const void *buffer, size_t buffer_size)
 {
-    spdm_psk_finish_request_t *spdm_request;
-    uintn message_size;
-    uintn hmac_size;
+    const spdm_psk_finish_request_t *spdm_request;
+    size_t message_size;
+    size_t hmac_size;
     uint8_t *verify_data;
 
     printf("SPDM_PSK_FINISH ");
@@ -2153,16 +2384,19 @@ void dump_spdm_psk_finish(IN void *buffer, IN uintn buffer_size)
 
     printf("\n");
 
-    ASSERT(m_current_session_info != NULL);
-    libspdm_append_message_f(m_spdm_context, m_current_session_info, TRUE, buffer, message_size);
+    LIBSPDM_ASSERT(m_current_session_info != NULL);
+    if (m_current_session_info == NULL) {
+        return;
+    }
+    libspdm_append_message_f(m_spdm_context, m_current_session_info, true, buffer, message_size);
 }
 
-void dump_spdm_psk_finish_rsp(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_psk_finish_rsp(const void *buffer, size_t buffer_size)
 {
-    uintn message_size;
+    size_t message_size;
     uint8_t th2_hash_data[64];
     libspdm_data_parameter_t parameter;
-    boolean use_psk;
+    bool use_psk;
 
     printf("SPDM_PSK_FINISH_RSP ");
 
@@ -2178,63 +2412,63 @@ void dump_spdm_psk_finish_rsp(IN void *buffer, IN uintn buffer_size)
 
     printf("\n");
 
-    ASSERT(m_current_session_info != NULL);
+    LIBSPDM_ASSERT(m_current_session_info != NULL);
     if (m_current_session_info == NULL) {
         return;
     }
 
     if (spdm_dump_session_data_provision(m_spdm_context,
-                         m_current_session_id, TRUE,
-                         TRUE) != RETURN_SUCCESS) {
+                                         m_current_session_id, true,
+                                         true) != LIBSPDM_STATUS_SUCCESS) {
         return;
     }
 
-    libspdm_append_message_f(m_spdm_context, m_current_session_info, TRUE, buffer, message_size);
+    libspdm_append_message_f(m_spdm_context, m_current_session_info, true, buffer, message_size);
 
-    DEBUG((DEBUG_INFO, "libspdm_generate_session_data_key[%x]\n",
-           m_current_session_id));
+    LIBSPDM_DEBUG((LIBSPDM_DEBUG_INFO, "libspdm_generate_session_data_key[%x]\n",
+                   m_current_session_id));
 
     if (spdm_dump_session_data_check(m_spdm_context, m_current_session_id,
-                     TRUE) != RETURN_SUCCESS) {
+                                     true) != LIBSPDM_STATUS_SUCCESS) {
         return;
     }
-    libspdm_calculate_th2_hash(m_spdm_context, m_current_session_info, TRUE,
-                th2_hash_data);
+    libspdm_calculate_th2_hash(m_spdm_context, m_current_session_info, true,
+                               th2_hash_data);
     libspdm_secured_message_set_use_psk(
         libspdm_get_secured_message_context_via_session_info(
             m_current_session_info),
-        FALSE);
+        false);
 
-    use_psk = FALSE;
-    zero_mem(&parameter, sizeof(parameter));
+    use_psk = false;
+    libspdm_zero_mem(&parameter, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_SESSION;
     *(uint32_t *)parameter.additional_data = m_current_session_id;
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_SESSION_USE_PSK, &parameter,
-              &use_psk, sizeof(use_psk));
+                     &use_psk, sizeof(use_psk));
 
     libspdm_generate_session_data_key(
         libspdm_get_secured_message_context_via_session_info(
             m_current_session_info),
         th2_hash_data);
 
-    use_psk = TRUE;
-    zero_mem(&parameter, sizeof(parameter));
+    use_psk = true;
+    libspdm_zero_mem(&parameter, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_SESSION;
     *(uint32_t *)parameter.additional_data = m_current_session_id;
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_SESSION_USE_PSK, &parameter,
-              &use_psk, sizeof(use_psk));
+                     &use_psk, sizeof(use_psk));
 
     libspdm_secured_message_set_use_psk(
         libspdm_get_secured_message_context_via_session_info(
             m_current_session_info),
-        TRUE);
+        true);
     libspdm_secured_message_set_session_state(
         libspdm_get_secured_message_context_via_session_info(
             m_current_session_info),
         LIBSPDM_SESSION_STATE_ESTABLISHED);
 }
 
-void dump_spdm_heartbeat(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_heartbeat(const void *buffer, size_t buffer_size)
 {
     printf("SPDM_HEARTBEAT ");
 
@@ -2250,7 +2484,7 @@ void dump_spdm_heartbeat(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_heartbeat_ack(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_heartbeat_ack(const void *buffer, size_t buffer_size)
 {
     printf("SPDM_HEARTBEAT_ACK ");
 
@@ -2266,9 +2500,9 @@ void dump_spdm_heartbeat_ack(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_key_update(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_key_update(const void *buffer, size_t buffer_size)
 {
-    spdm_key_update_request_t *spdm_request;
+    const spdm_key_update_request_t *spdm_request;
 
     printf("SPDM_KEY_UPDATE ");
 
@@ -2283,16 +2517,16 @@ void dump_spdm_key_update(IN void *buffer, IN uintn buffer_size)
         printf("(KeyOp=0x%02x(", spdm_request->header.param1);
         dump_entry_value(
             m_spdm_key_update_operation_string_table,
-            ARRAY_SIZE(m_spdm_key_update_operation_string_table),
+            LIBSPDM_ARRAY_SIZE(m_spdm_key_update_operation_string_table),
             spdm_request->header.param1);
         printf("), Tag=0x%02x) ", spdm_request->header.param2);
     }
 
     printf("\n");
 
-    ASSERT(m_current_session_info != NULL);
+    LIBSPDM_ASSERT(m_current_session_info != NULL);
     if (m_encapsulated) {
-        ASSERT(m_current_session_info != NULL);
+        LIBSPDM_ASSERT(m_current_session_info != NULL);
         switch (((spdm_message_header_t *)buffer)->param1) {
         case SPDM_KEY_UPDATE_OPERATIONS_TABLE_UPDATE_KEY:
             libspdm_create_update_session_data_key(
@@ -2323,9 +2557,9 @@ void dump_spdm_key_update(IN void *buffer, IN uintn buffer_size)
     }
 }
 
-void dump_spdm_key_update_ack(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_key_update_ack(const void *buffer, size_t buffer_size)
 {
-    spdm_key_update_response_t *spdm_response;
+    const spdm_key_update_response_t *spdm_response;
 
     printf("SPDM_KEY_UPDATE_ACK ");
 
@@ -2340,7 +2574,7 @@ void dump_spdm_key_update_ack(IN void *buffer, IN uintn buffer_size)
         printf("(KeyOp=0x%02x(", spdm_response->header.param1);
         dump_entry_value(
             m_spdm_key_update_operation_string_table,
-            ARRAY_SIZE(m_spdm_key_update_operation_string_table),
+            LIBSPDM_ARRAY_SIZE(m_spdm_key_update_operation_string_table),
             spdm_response->header.param1);
         printf("), Tag=0x%02x) ", spdm_response->header.param2);
     }
@@ -2348,7 +2582,7 @@ void dump_spdm_key_update_ack(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_get_encapsulated_request(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_get_encapsulated_request(const void *buffer, size_t buffer_size)
 {
     printf("SPDM_GET_ENCAPSULATED_REQUEST ");
 
@@ -2364,10 +2598,10 @@ void dump_spdm_get_encapsulated_request(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_encapsulated_request(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_encapsulated_request(const void *buffer, size_t buffer_size)
 {
-    spdm_encapsulated_request_response_t *spdm_response;
-    uintn header_size;
+    const spdm_encapsulated_request_response_t *spdm_response;
+    size_t header_size;
 
     printf("SPDM_ENCAPSULATED_REQUEST ");
 
@@ -2382,17 +2616,17 @@ void dump_spdm_encapsulated_request(IN void *buffer, IN uintn buffer_size)
         printf("(ReqID=0x%02x) ", spdm_response->header.param1);
     }
 
-    m_encapsulated = TRUE;
+    m_encapsulated = true;
     dump_spdm_message((uint8_t *)buffer + header_size,
-              buffer_size - header_size);
-    m_encapsulated = FALSE;
+                      buffer_size - header_size);
+    m_encapsulated = false;
 }
 
-void dump_spdm_deliver_encapsulated_response(IN void *buffer,
-                         IN uintn buffer_size)
+void dump_spdm_deliver_encapsulated_response(const void *buffer,
+                                             size_t buffer_size)
 {
-    spdm_deliver_encapsulated_response_request_t *spdm_request;
-    uintn header_size;
+    const spdm_deliver_encapsulated_response_request_t *spdm_request;
+    size_t header_size;
 
     printf("SPDM_DELIVER_ENCAPSULATED_RESPONSE ");
 
@@ -2407,28 +2641,36 @@ void dump_spdm_deliver_encapsulated_response(IN void *buffer,
         printf("(ReqID=0x%02x) ", spdm_request->header.param1);
     }
 
-    m_encapsulated = TRUE;
+    m_encapsulated = true;
     dump_spdm_message((uint8_t *)buffer + header_size,
-              buffer_size - header_size);
-    m_encapsulated = FALSE;
+                      buffer_size - header_size);
+    m_encapsulated = false;
 }
 
-void dump_spdm_encapsulated_response_ack(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_encapsulated_response_ack(const void *buffer, size_t buffer_size)
 {
-    spdm_encapsulated_response_ack_response_t *spdm_response;
-    uintn header_size;
+    const spdm_encapsulated_response_ack_response_t *spdm_response;
+    size_t header_size;
 
     printf("SPDM_ENCAPSULATED_RESPONSE_ACK ");
 
-    header_size = sizeof(spdm_encapsulated_response_ack_response_t);
+    header_size = sizeof(spdm_message_header_t);
     if (buffer_size < header_size) {
         printf("\n");
         return;
     }
 
     spdm_response = buffer;
+    if (spdm_response->header.spdm_version >= SPDM_MESSAGE_VERSION_12) {
+        header_size = sizeof(spdm_encapsulated_response_ack_response_t);
+    }
+
     if (!m_param_quite_mode) {
-        printf("(ReqID=0x%02x) ", spdm_response->header.param1);
+        printf("(ReqID=0x%02x", spdm_response->header.param1);
+        if (spdm_response->header.spdm_version >= SPDM_MESSAGE_VERSION_12) {
+            printf(", AckReqID=0x%02x", spdm_response->ack_request_id);
+        }
+        printf(") ");
     }
 
     switch (spdm_response->header.param2) {
@@ -2439,10 +2681,10 @@ void dump_spdm_encapsulated_response_ack(IN void *buffer, IN uintn buffer_size)
         break;
 
     case SPDM_ENCAPSULATED_RESPONSE_ACK_RESPONSE_PAYLOAD_TYPE_PRESENT:
-        m_encapsulated = TRUE;
+        m_encapsulated = true;
         dump_spdm_message((uint8_t *)buffer + header_size,
-                  buffer_size - header_size);
-        m_encapsulated = FALSE;
+                          buffer_size - header_size);
+        m_encapsulated = false;
         return;
 
     case SPDM_ENCAPSULATED_RESPONSE_ACK_RESPONSE_PAYLOAD_TYPE_REQ_SLOT_NUMBER:
@@ -2460,9 +2702,9 @@ void dump_spdm_encapsulated_response_ack(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_end_session(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_end_session(const void *buffer, size_t buffer_size)
 {
-    spdm_end_session_request_t *spdm_request;
+    const spdm_end_session_request_t *spdm_request;
 
     printf("SPDM_END_SESSION ");
 
@@ -2477,7 +2719,7 @@ void dump_spdm_end_session(IN void *buffer, IN uintn buffer_size)
         printf("(Attr=0x%02x(", spdm_request->header.param1);
         dump_entry_flags(
             m_spdm_end_session_attribute_string_table,
-            ARRAY_SIZE(m_spdm_end_session_attribute_string_table),
+            LIBSPDM_ARRAY_SIZE(m_spdm_end_session_attribute_string_table),
             spdm_request->header.param1);
         printf(")) ");
     }
@@ -2485,7 +2727,7 @@ void dump_spdm_end_session(IN void *buffer, IN uintn buffer_size)
     printf("\n");
 }
 
-void dump_spdm_end_session_ack(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_end_session_ack(const void *buffer, size_t buffer_size)
 {
     printf("SPDM_END_SESSION_ACK ");
 
@@ -2499,6 +2741,270 @@ void dump_spdm_end_session_ack(IN void *buffer, IN uintn buffer_size)
     }
 
     libspdm_free_session_id(m_spdm_context, m_current_session_id);
+
+    printf("\n");
+}
+
+void dump_spdm_get_csr(const void *buffer, size_t buffer_size)
+{
+    const spdm_get_csr_request_t *spdm_request;
+    uint8_t *ptr;
+
+    printf("SPDM_GET_CSR ");
+
+    if (buffer_size < sizeof(spdm_get_csr_request_t)) {
+        printf("\n");
+        return;
+    }
+
+    spdm_request = buffer;
+
+    if (buffer_size < sizeof(spdm_get_csr_request_t) +
+                      spdm_request->opaque_data_length +
+                      spdm_request->requester_info_length) {
+        printf("\n");
+        return;
+    }
+
+    if (!m_param_quite_mode) {
+        printf("() ");
+        if (m_param_all_mode) {
+            printf("\n    RequesterInfo(");
+            ptr = (void *)(spdm_request + 1);
+            dump_data(ptr, spdm_request->requester_info_length);
+            printf(")");
+
+            printf("\n    OpaqueData(");
+            ptr = (void *)(ptr + spdm_request->requester_info_length);
+            dump_data(ptr, spdm_request->opaque_data_length);
+            printf(")");
+        }
+    }
+
+    printf("\n");
+}
+
+void dump_spdm_csr(const void *buffer, size_t buffer_size)
+{
+    const spdm_csr_response_t *spdm_response;
+    uint8_t *ptr;
+
+    printf("SPDM_CSR ");
+
+    if (buffer_size < sizeof(spdm_csr_response_t)) {
+        printf("\n");
+        return;
+    }
+
+    spdm_response = buffer;
+
+    if (buffer_size < sizeof(spdm_csr_response_t) +
+                      spdm_response->csr_length) {
+        printf("\n");
+        return;
+    }
+
+    if (!m_param_quite_mode) {
+        printf("() ");
+        if (m_param_all_mode) {
+            printf("\n    CSR(");
+            ptr = (void *)(spdm_response + 1);
+            dump_data(ptr, spdm_response->csr_length);
+            printf(")");
+        }
+    }
+
+    printf("\n");
+}
+
+void dump_spdm_set_certificate(const void *buffer, size_t buffer_size)
+{
+    const spdm_set_certificate_request_t *spdm_request;
+    const spdm_cert_chain_t *cert_chain;
+
+    printf("SPDM_SET_CERTIFICATE ");
+
+    if (buffer_size < sizeof(spdm_set_certificate_request_t) + sizeof(spdm_cert_chain_t)) {
+        printf("\n");
+        return;
+    }
+
+    spdm_request = buffer;
+    cert_chain = (void *)(spdm_request + 1);
+    if (buffer_size < sizeof(spdm_set_certificate_request_t) + cert_chain->length) {
+        printf("\n");
+        return;
+    }
+
+    if (!m_param_quite_mode) {
+        printf("(SlotID=0x%02x) ", spdm_request->header.param1 & 0xF);
+        if (m_param_all_mode) {
+                printf("\n    CertChain(\n");
+                dump_hex((void *)cert_chain, cert_chain->length);
+                printf("    )");
+        }
+    }
+
+    printf("\n");
+}
+
+void dump_spdm_set_certificate_rsp(const void *buffer, size_t buffer_size)
+{
+    const spdm_set_certificate_response_t *spdm_response;
+
+    printf("SPDM_SET_CERTIFICATE_RSP ");
+
+    if (buffer_size < sizeof(spdm_set_certificate_response_t)) {
+        printf("\n");
+        return;
+    }
+
+    spdm_response = buffer;
+
+    if (!m_param_quite_mode) {
+        printf("(SlotID=0x%02x) ", spdm_response->header.param1 & 0xF);
+    }
+
+    printf("\n");
+}
+
+void dump_spdm_chunk_send(const void *buffer, size_t buffer_size)
+{
+    const spdm_chunk_send_request_t *spdm_request;
+    uint32_t *large_message_size;
+
+    printf("SPDM_CHUNK_SEND ");
+
+    if (buffer_size < sizeof(spdm_chunk_send_request_t)) {
+        printf("\n");
+        return;
+    }
+
+    spdm_request = buffer;
+
+    if (buffer_size - sizeof(spdm_chunk_send_request_t) < spdm_request->chunk_size) {
+        printf("\n");
+        return;
+    }
+    if (spdm_request->chunk_seq_no == 0) {
+        if (buffer_size - sizeof(spdm_chunk_send_request_t) - spdm_request->chunk_size <
+            sizeof(uint32_t)) {
+            printf("\n");
+            return;
+        }
+    }
+
+    if (!m_param_quite_mode) {
+        printf("(Attr=0x%02x(", spdm_request->header.param1);
+        dump_entry_flags(
+            m_spdm_chunk_send_attribute_string_table,
+            LIBSPDM_ARRAY_SIZE(m_spdm_chunk_send_attribute_string_table),
+            spdm_request->header.param1);
+        printf("), Handle=0x%02x, ChunkSeqNo=0x%04x, ChunkSize=0x%08x",
+               spdm_request->header.param2,
+               spdm_request->chunk_seq_no,
+               spdm_request->chunk_size);
+        if (spdm_request->chunk_seq_no == 0) {
+            large_message_size = (void *)(spdm_request + 1);
+            printf(", LargeMsgSize=0x%08x", *large_message_size);
+        }
+        printf(") ");
+    }
+
+    printf("\n");
+}
+
+void dump_spdm_chunk_send_ack(const void *buffer, size_t buffer_size)
+{
+    const spdm_chunk_send_ack_response_t *spdm_response;
+
+    printf("SPDM_CHUNK_SEND_ACK ");
+
+    if (buffer_size < sizeof(spdm_chunk_send_ack_response_t)) {
+        printf("\n");
+        return;
+    }
+
+    spdm_response = buffer;
+
+    if (!m_param_quite_mode) {
+        printf("(Attr=0x%02x(", spdm_response->header.param1);
+        dump_entry_flags(
+            m_spdm_chunk_send_ack_attribute_string_table,
+            LIBSPDM_ARRAY_SIZE(m_spdm_chunk_send_ack_attribute_string_table),
+            spdm_response->header.param1);
+        printf("), Handle=0x%02x, ChunkSeqNo=0x%04x) ",
+               spdm_response->header.param2,
+               spdm_response->chunk_seq_no);
+    }
+
+    printf("\n");
+}
+
+void dump_spdm_chunk_get(const void *buffer, size_t buffer_size)
+{
+    const spdm_chunk_get_request_t *spdm_request;
+
+    printf("SPDM_CHUNK_GET ");
+
+    if (buffer_size < sizeof(spdm_chunk_get_request_t)) {
+        printf("\n");
+        return;
+    }
+
+    spdm_request = buffer;
+
+    if (!m_param_quite_mode) {
+        printf("(Handle=0x%02x, ChunkSeqNo=0x%04x) ",
+               spdm_request->header.param2,
+               spdm_request->chunk_seq_no);
+    }
+
+    printf("\n");
+}
+
+void dump_spdm_chunk_response(const void *buffer, size_t buffer_size)
+{
+    const spdm_chunk_response_response_t *spdm_response;
+    uint32_t *large_message_size;
+
+    printf("SPDM_CHUNK_RESPONSE ");
+
+    if (buffer_size < sizeof(spdm_chunk_response_response_t)) {
+        printf("\n");
+        return;
+    }
+
+    spdm_response = buffer;
+
+    if (buffer_size - sizeof(spdm_chunk_response_response_t) < spdm_response->chunk_size) {
+        printf("\n");
+        return;
+    }
+    if (spdm_response->chunk_seq_no == 0) {
+        if (buffer_size - sizeof(spdm_chunk_response_response_t) - spdm_response->chunk_size <
+            sizeof(uint32_t)) {
+            printf("\n");
+            return;
+        }
+    }
+
+    if (!m_param_quite_mode) {
+        printf("(Attr=0x%02x(", spdm_response->header.param1);
+        dump_entry_flags(
+            m_spdm_chunk_send_attribute_string_table,
+            LIBSPDM_ARRAY_SIZE(m_spdm_chunk_send_attribute_string_table),
+            spdm_response->header.param1);
+        printf("), Handle=0x%02x, ChunkSeqNo=0x%04x, ChunkSize=0x%08x",
+               spdm_response->header.param2,
+               spdm_response->chunk_seq_no,
+               spdm_response->chunk_size);
+        if (spdm_response->chunk_seq_no == 0) {
+            large_message_size = (void *)(spdm_response + 1);
+            printf(", LargeMsgSize=0x%08x", *large_message_size);
+        }
+        printf(") ");
+    }
 
     printf("\n");
 }
@@ -2531,6 +3037,14 @@ dispatch_table_entry_t m_spdm_dispatch[] = {
       dump_spdm_encapsulated_response_ack },
     { SPDM_END_SESSION_ACK, "SPDM_END_SESSION_ACK",
       dump_spdm_end_session_ack },
+    { SPDM_CSR, "SPDM_CSR",
+      dump_spdm_csr },
+    { SPDM_SET_CERTIFICATE_RSP, "SPDM_SET_CERTIFICATE_RSP",
+      dump_spdm_set_certificate_rsp },
+    { SPDM_CHUNK_SEND_ACK, "SPDM_CHUNK_SEND_ACK",
+      dump_spdm_chunk_send_ack },
+    { SPDM_CHUNK_RESPONSE, "SPDM_CHUNK_RESPONSE",
+      dump_spdm_chunk_response },
 
     { SPDM_GET_DIGESTS, "SPDM_GET_DIGESTS", dump_spdm_get_digests },
     { SPDM_GET_CERTIFICATE, "SPDM_GET_CERTIFICATE",
@@ -2559,11 +3073,19 @@ dispatch_table_entry_t m_spdm_dispatch[] = {
       "SPDM_DELIVER_ENCAPSULATED_RESPONSE",
       dump_spdm_deliver_encapsulated_response },
     { SPDM_END_SESSION, "SPDM_END_SESSION", dump_spdm_end_session },
+    { SPDM_GET_CSR, "SPDM_GET_CSR",
+      dump_spdm_get_csr },
+    { SPDM_SET_CERTIFICATE, "SPDM_SET_CERTIFICATE",
+      dump_spdm_set_certificate },
+    { SPDM_CHUNK_SEND, "SPDM_CHUNK_SEND",
+      dump_spdm_chunk_send },
+    { SPDM_CHUNK_GET, "SPDM_CHUNK_GET",
+      dump_spdm_chunk_get },
 };
 
-void dump_spdm_message(IN void *buffer, IN uintn buffer_size)
+void dump_spdm_message(const void *buffer, size_t buffer_size)
 {
-    spdm_message_header_t *SpdmHeader;
+    const spdm_message_header_t *SpdmHeader;
 
     if (buffer_size < sizeof(spdm_message_header_t)) {
         printf("\n");
@@ -2582,9 +3104,9 @@ void dump_spdm_message(IN void *buffer, IN uintn buffer_size)
     printf("SPDM(%x, 0x%02x) ", SpdmHeader->spdm_version,
            SpdmHeader->request_response_code);
 
-    dump_dispatch_message(m_spdm_dispatch, ARRAY_SIZE(m_spdm_dispatch),
-                  SpdmHeader->request_response_code,
-                  (uint8_t *)buffer, buffer_size);
+    dump_dispatch_message(m_spdm_dispatch, LIBSPDM_ARRAY_SIZE(m_spdm_dispatch),
+                          SpdmHeader->request_response_code,
+                          (uint8_t *)buffer, buffer_size);
 
     if (m_param_dump_hex) {
         if (!m_encapsulated) {
@@ -2596,7 +3118,7 @@ void dump_spdm_message(IN void *buffer, IN uintn buffer_size)
     }
 }
 
-boolean init_spdm_dump(void)
+bool init_spdm_dump(void)
 {
     libspdm_data_parameter_t parameter;
 
@@ -2634,35 +3156,37 @@ boolean init_spdm_dump(void)
     }
     libspdm_init_context(m_spdm_context);
 
-    
+
     /* Provision data in case the GET_CAPABILITIES or NEGOTIATE_ALGORITHMS are not sent.*/
-    
-    zero_mem(&parameter, sizeof(parameter));
+
+    libspdm_zero_mem(&parameter, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_CAPABILITY_FLAGS, &parameter,
-              &m_spdm_requester_capabilities_flags, sizeof(uint32_t));
+                     &m_spdm_requester_capabilities_flags, sizeof(uint32_t));
     parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_CAPABILITY_FLAGS, &parameter,
-              &m_spdm_responder_capabilities_flags, sizeof(uint32_t));
+                     &m_spdm_responder_capabilities_flags, sizeof(uint32_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_MEASUREMENT_SPEC, &parameter,
-              &m_spdm_measurement_spec, sizeof(uint8_t));
+                     &m_spdm_measurement_spec, sizeof(uint8_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_MEASUREMENT_HASH_ALGO,
-              &parameter, &m_spdm_measurement_hash_algo,
-              sizeof(uint32_t));
+                     &parameter, &m_spdm_measurement_hash_algo,
+                     sizeof(uint32_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_BASE_ASYM_ALGO, &parameter,
-              &m_spdm_base_asym_algo, sizeof(uint32_t));
+                     &m_spdm_base_asym_algo, sizeof(uint32_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_BASE_HASH_ALGO, &parameter,
-              &m_spdm_base_hash_algo, sizeof(uint32_t));
+                     &m_spdm_base_hash_algo, sizeof(uint32_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_DHE_NAME_GROUP, &parameter,
-              &m_spdm_dhe_named_group, sizeof(uint16_t));
+                     &m_spdm_dhe_named_group, sizeof(uint16_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_AEAD_CIPHER_SUITE, &parameter,
-              &m_spdm_aead_cipher_suite, sizeof(uint16_t));
+                     &m_spdm_aead_cipher_suite, sizeof(uint16_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_REQ_BASE_ASYM_ALG, &parameter,
-              &m_spdm_req_base_asym_alg, sizeof(uint16_t));
+                     &m_spdm_req_base_asym_alg, sizeof(uint16_t));
     libspdm_set_data(m_spdm_context, LIBSPDM_DATA_KEY_SCHEDULE, &parameter,
-              &m_spdm_key_schedule, sizeof(uint16_t));
+                     &m_spdm_key_schedule, sizeof(uint16_t));
+    libspdm_set_data(m_spdm_context, LIBSPDM_DATA_OTHER_PARAMS_SUPPORT, &parameter,
+                     &m_spdm_other_params_support, sizeof(uint8_t));
 
-    return TRUE;
+    return true;
 
 error:
     if (m_spdm_dec_message_buffer != NULL) {
@@ -2677,11 +3201,11 @@ error:
         free(m_spdm_cert_chain_buffer);
         m_spdm_cert_chain_buffer = NULL;
     }
-    if (m_local_used_cert_chain_buffer == NULL) {
+    if (m_local_used_cert_chain_buffer != NULL) {
         free(m_local_used_cert_chain_buffer);
         m_local_used_cert_chain_buffer = NULL;
     }
-    if (m_peer_cert_chain_buffer == NULL) {
+    if (m_peer_cert_chain_buffer != NULL) {
         free(m_peer_cert_chain_buffer);
         m_peer_cert_chain_buffer = NULL;
     }
@@ -2689,7 +3213,7 @@ error:
         free(m_spdm_context);
         m_spdm_context = NULL;
     }
-    return FALSE;
+    return false;
 }
 
 void deinit_spdm_dump(void)

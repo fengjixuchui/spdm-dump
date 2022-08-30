@@ -1,20 +1,20 @@
 /**
-    Copyright Notice:
-    Copyright 2021 DMTF. All rights reserved.
-    License: BSD 3-Clause License. For full text see link: https://github.com/DMTF/spdm-dump/blob/main/LICENSE.md
-**/
+ *  Copyright Notice:
+ *  Copyright 2021-2022 DMTF. All rights reserved.
+ *  License: BSD 3-Clause License. For full text see link: https://github.com/DMTF/spdm-dump/blob/main/LICENSE.md
+ **/
 
 #include "spdm_dump.h"
 
 /**
-  This function dump raw data.
-
-  @param  data  raw data
-  @param  size  raw data size
-**/
-void dump_hex_str(IN uint8_t *data, IN uintn size)
+ * This function dump raw data.
+ *
+ * @param  data  raw data
+ * @param  size  raw data size
+ **/
+void dump_hex_str(const uint8_t *data, size_t size)
 {
-    uintn index;
+    size_t index;
 
     for (index = 0; index < size; index++) {
         printf("%02x", data[index]);
@@ -22,14 +22,14 @@ void dump_hex_str(IN uint8_t *data, IN uintn size)
 }
 
 /**
-  This function dump raw data.
-
-  @param  data  raw data
-  @param  size  raw data size
-**/
-void dump_data(IN uint8_t *data, IN uintn size)
+ * This function dump raw data.
+ *
+ * @param  data  raw data
+ * @param  size  raw data size
+ **/
+void dump_data(const uint8_t *data, size_t size)
 {
-    uintn index;
+    size_t index;
 
     for (index = 0; index < size; index++) {
         if (index != 0) {
@@ -40,16 +40,16 @@ void dump_data(IN uint8_t *data, IN uintn size)
 }
 
 /**
-  This function dump raw data with colume format.
-
-  @param  data  raw data
-  @param  size  raw data size
-**/
-void dump_hex(IN uint8_t *data, IN uintn size)
+ * This function dump raw data with colume format.
+ *
+ * @param  data  raw data
+ * @param  size  raw data size
+ **/
+void dump_hex(const uint8_t *data, size_t size)
 {
     uint32_t index;
-    uintn count;
-    uintn left;
+    size_t count;
+    size_t left;
 
 #define COLUME_SIZE (16 * 2)
 
@@ -68,90 +68,96 @@ void dump_hex(IN uint8_t *data, IN uintn size)
     }
 }
 
-static boolean char_to_byte(IN char ch, OUT uint8_t *data)
+static bool char_to_byte(const char ch, uint8_t *data)
 {
     if (ch >= '0' && ch <= '9') {
         *data = ch - '0';
-        return TRUE;
+        return true;
     }
     if (ch >= 'a' && ch <= 'f') {
         *data = ch - 'a' + 0xa;
-        return TRUE;
+        return true;
     }
     if (ch >= 'A' && ch <= 'F') {
         *data = ch - 'A' + 0xA;
-        return TRUE;
+        return true;
     }
     printf("hex_string error - invalid char '%c'\n", ch);
-    return FALSE;
+    return false;
 }
 
-static boolean one_byte_string_to_buffer(IN char one_byte_string[2],
-                     OUT uint8_t *buffer)
+static bool one_byte_string_to_buffer(const char one_byte_string[2],
+                                      uint8_t *buffer)
 {
     uint8_t data_h;
     uint8_t data_l;
 
     if (!char_to_byte(one_byte_string[0], &data_h)) {
-        return FALSE;
+        return false;
     }
     if (!char_to_byte(one_byte_string[1], &data_l)) {
-        return FALSE;
+        return false;
     }
 
     *buffer = (data_h << 4) | data_l;
-    return TRUE;
+    return true;
 }
 
-boolean hex_string_to_buffer(IN char *hex_string, OUT void **buffer,
-                 OUT uintn *buffer_size)
+bool hex_string_to_buffer(const char *hex_string, void **buffer,
+                          size_t *buffer_size)
 {
-    uintn str_len;
-    uintn index;
+    size_t str_len;
+    size_t index;
 
     str_len = strlen(hex_string);
     if ((str_len & 0x1) != 0) {
         printf("hex_string error - strlen (%d) is not even\n",
                (uint32_t)str_len);
-        return FALSE;
+        return false;
     }
     *buffer_size = str_len / 2;
     *buffer = (void *)malloc(*buffer_size);
     if (*buffer == NULL) {
         printf("memory out of resource\n");
-        return FALSE;
+        return false;
     }
 
     for (index = 0; index < str_len / 2; index++) {
         if (!one_byte_string_to_buffer(hex_string + index * 2,
-                           (uint8_t *)*buffer + index)) {
-            return FALSE;
+                                       (uint8_t *)*buffer + index)) {
+            return false;
         }
     }
 
-    return TRUE;
+    return true;
 }
 
-boolean read_input_file(IN char *file_name, OUT void **file_data,
-            OUT uintn *file_size)
+bool read_input_file(const char *file_name, void **file_data,
+                     size_t *file_size)
 {
     FILE *fp_in;
-    uintn temp_result;
+    size_t temp_result;
 
     if ((fp_in = fopen(file_name, "rb")) == NULL) {
         printf("Unable to open file %s\n", file_name);
         *file_data = NULL;
-        return FALSE;
+        return false;
     }
 
     fseek(fp_in, 0, SEEK_END);
     *file_size = ftell(fp_in);
+    if (*file_size == -1) {
+        printf("Unable to get the file size %s\n", file_name);
+        *file_data = NULL;
+        fclose(fp_in);
+        return false;
+    }
 
     *file_data = (void *)malloc(*file_size);
     if (NULL == *file_data) {
         printf("No sufficient memory to allocate %s\n", file_name);
         fclose(fp_in);
-        return FALSE;
+        return false;
     }
 
     fseek(fp_in, 0, SEEK_SET);
@@ -160,45 +166,45 @@ boolean read_input_file(IN char *file_name, OUT void **file_data,
         printf("Read input file error %s", file_name);
         free((void *)*file_data);
         fclose(fp_in);
-        return FALSE;
+        return false;
     }
 
     fclose(fp_in);
 
-    return TRUE;
+    return true;
 }
 
-boolean write_output_file(IN char *file_name, IN void *file_data,
-              IN uintn file_size)
+bool write_output_file(const char *file_name, const void *file_data,
+                       size_t file_size)
 {
     FILE *fp_out;
 
     if ((fp_out = fopen(file_name, "w+b")) == NULL) {
         printf("Unable to open file %s\n", file_name);
-        return FALSE;
+        return false;
     }
 
     if ((fwrite(file_data, 1, file_size, fp_out)) != file_size) {
         printf("Write output file error %s\n", file_name);
         fclose(fp_out);
-        return FALSE;
+        return false;
     }
 
     fclose(fp_out);
 
-    return TRUE;
+    return true;
 }
 
-boolean open_output_file(IN char *file_name)
+bool open_output_file(const char *file_name)
 {
     FILE *fp_out;
 
     if ((fp_out = fopen(file_name, "w+b")) == NULL) {
         printf("Unable to open file %s\n", file_name);
-        return FALSE;
+        return false;
     }
 
     fclose(fp_out);
 
-    return TRUE;
+    return true;
 }

@@ -1,16 +1,16 @@
 /**
-    Copyright Notice:
-    Copyright 2021 DMTF. All rights reserved.
-    License: BSD 3-Clause License. For full text see link: https://github.com/DMTF/spdm-dump/blob/main/LICENSE.md
-**/
+ *  Copyright Notice:
+ *  Copyright 2021-2022 DMTF. All rights reserved.
+ *  License: BSD 3-Clause License. For full text see link: https://github.com/DMTF/spdm-dump/blob/main/LICENSE.md
+ **/
 
 #include "spdm_dump.h"
 
-void dump_pldm_control_get_tid(IN void *buffer, IN uintn buffer_size)
+void dump_pldm_control_get_tid(const void *buffer, size_t buffer_size)
 {
-    pldm_message_header_t *pldm_message_header;
-    boolean is_req;
-    uintn header_size;
+    const pldm_message_header_t *pldm_message_header;
+    bool is_req;
+    size_t header_size;
 
     pldm_message_header = buffer;
     is_req = ((pldm_message_header->instance_id & 0x80) != 0);
@@ -53,37 +53,37 @@ dispatch_table_entry_t m_pldm_control_dispatch[] = {
       NULL },
 };
 
-void dump_pldm_control(IN void *buffer, IN uintn buffer_size)
+void dump_pldm_control(const void *buffer, size_t buffer_size)
 {
-    pldm_message_header_t *pldm_message_header;
+    const pldm_message_header_t *pldm_message_header;
 
     printf("ControlDiscovery ");
 
     pldm_message_header = buffer;
 
     dump_dispatch_message(m_pldm_control_dispatch,
-                  ARRAY_SIZE(m_pldm_control_dispatch),
-                  pldm_message_header->pldm_command_code,
-                  (uint8_t *)buffer, buffer_size);
+                          LIBSPDM_ARRAY_SIZE(m_pldm_control_dispatch),
+                          pldm_message_header->pldm_command_code,
+                          (uint8_t *)buffer, buffer_size);
 }
 
 dispatch_table_entry_t m_pldm_dispatch[] = {
     { PLDM_MESSAGE_TYPE_CONTROL_DISCOVERY, "ControlDiscovery",
       dump_pldm_control },
-    { MCTP_MESSAGE_TYPE_SMBIOS, "SMBIOS", NULL },
-    { MCTP_MESSAGE_TYPE_PLATFORM_MONITORING_CONTROL, "Platform", NULL },
-    { MCTP_MESSAGE_TYPE_BIOS_CONTROL_CONFIGURATION, "BIOS", NULL },
-    { MCTP_MESSAGE_TYPE_FRU_DATA, "FRU", NULL },
-    { MCTP_MESSAGE_TYPE_FIRMWARE_UPDATE, "FirmwareUpdate", NULL },
-    { MCTP_MESSAGE_TYPE_REDFISH_DEVICE_ENABLEMENT, "RedFish", NULL },
-    { MCTP_MESSAGE_TYPE_OEM, "OEM", NULL },
+    { PLDM_MESSAGE_TYPE_SMBIOS, "SMBIOS", NULL },
+    { PLDM_MESSAGE_TYPE_PLATFORM_MONITORING_CONTROL, "Platform", NULL },
+    { PLDM_MESSAGE_TYPE_BIOS_CONTROL_CONFIGURATION, "BIOS", NULL },
+    { PLDM_MESSAGE_TYPE_FRU_DATA, "FRU", NULL },
+    { PLDM_MESSAGE_TYPE_FIRMWARE_UPDATE, "FirmwareUpdate", NULL },
+    { PLDM_MESSAGE_TYPE_REDFISH_DEVICE_ENABLEMENT, "RedFish", NULL },
+    { PLDM_MESSAGE_TYPE_OEM, "OEM", NULL },
 };
 
-void dump_pldm_message(IN void *buffer, IN uintn buffer_size)
+void dump_pldm_message(const void *buffer, size_t buffer_size)
 {
-    pldm_message_header_t *pldm_message_header;
+    const pldm_message_header_t *pldm_message_header;
     pldm_message_response_header_t *pldm_response_header;
-    boolean is_req;
+    bool is_req;
 
     if (buffer_size < sizeof(pldm_message_header_t)) {
         printf("\n");
@@ -96,7 +96,7 @@ void dump_pldm_message(IN void *buffer, IN uintn buffer_size)
     if (!is_req) {
         if (buffer_size <
             sizeof(pldm_message_header_t) +
-                sizeof(pldm_message_response_header_t)) {
+            sizeof(pldm_message_response_header_t)) {
             printf("\n");
             return;
         }
@@ -121,10 +121,10 @@ void dump_pldm_message(IN void *buffer, IN uintn buffer_size)
                pldm_message_header->instance_id & 0x1F,
                ((pldm_message_header->instance_id & 0x40) != 0) ? 1 : 0,
                ((pldm_message_header->instance_id & 0x80) != 0) ? 1 :
-                                      0);
+               0);
     }
 
-    dump_dispatch_message(m_pldm_dispatch, ARRAY_SIZE(m_pldm_dispatch),
-                  pldm_message_header->pldm_type & 0x3F,
-                  (uint8_t *)buffer, buffer_size);
+    dump_dispatch_message(m_pldm_dispatch, LIBSPDM_ARRAY_SIZE(m_pldm_dispatch),
+                          pldm_message_header->pldm_type & 0x3F,
+                          (uint8_t *)buffer, buffer_size);
 }

@@ -1,8 +1,8 @@
 /**
-    Copyright Notice:
-    Copyright 2021 DMTF. All rights reserved.
-    License: BSD 3-Clause License. For full text see link: https://github.com/DMTF/spdm-dump/blob/main/LICENSE.md
-**/
+ *  Copyright Notice:
+ *  Copyright 2021-2022 DMTF. All rights reserved.
+ *  License: BSD 3-Clause License. For full text see link: https://github.com/DMTF/spdm-dump/blob/main/LICENSE.md
+ **/
 
 #include "spdm_dump.h"
 
@@ -14,10 +14,10 @@ dispatch_table_entry_t m_pci_doe_dispatch[] = {
       dump_secured_spdm_message },
 };
 
-void dump_pci_doe_packet(IN void *buffer, IN uintn buffer_size)
+void dump_pci_doe_packet(const void *buffer, size_t buffer_size)
 {
-    pci_doe_data_object_header_t *pci_doe_header;
-    uintn header_size;
+    const pci_doe_data_object_header_t *pci_doe_header;
+    size_t header_size;
 
     header_size = sizeof(pci_doe_data_object_header_t);
     if (buffer_size < header_size) {
@@ -40,10 +40,10 @@ void dump_pci_doe_packet(IN void *buffer, IN uintn buffer_size)
         (pci_doe_header->data_object_type ==
          PCI_DOE_DATA_OBJECT_TYPE_SECURED_SPDM)) {
         dump_dispatch_message(m_pci_doe_dispatch,
-                      ARRAY_SIZE(m_pci_doe_dispatch),
-                      pci_doe_header->data_object_type,
-                      (uint8_t *)buffer + header_size,
-                      buffer_size - header_size);
+                              LIBSPDM_ARRAY_SIZE(m_pci_doe_dispatch),
+                              pci_doe_header->data_object_type,
+                              (uint8_t *)buffer + header_size,
+                              buffer_size - header_size);
 
         if (m_param_dump_hex &&
             (pci_doe_header->data_object_type !=

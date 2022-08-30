@@ -1,8 +1,8 @@
 /**
-    Copyright Notice:
-    Copyright 2021 DMTF. All rights reserved.
-    License: BSD 3-Clause License. For full text see link: https://github.com/DMTF/spdm-dump/blob/main/LICENSE.md
-**/
+ *  Copyright Notice:
+ *  Copyright 2021-2022 DMTF. All rights reserved.
+ *  License: BSD 3-Clause License. For full text see link: https://github.com/DMTF/spdm-dump/blob/main/LICENSE.md
+ **/
 
 #include "spdm_dump.h"
 
@@ -19,10 +19,10 @@ dispatch_table_entry_t m_mctp_dispatch[] = {
     { MCTP_MESSAGE_TYPE_VENDOR_DEFINED_IANA, "VendorDefinedIana", NULL },
 };
 
-void dump_mctp_message(IN void *buffer, IN uintn buffer_size)
+void dump_mctp_message(const void *buffer, size_t buffer_size)
 {
     mctp_message_header_t *mctp_message_header;
-    uintn header_size;
+    size_t header_size;
 
     header_size = sizeof(mctp_message_header_t);
     if (buffer_size < header_size) {
@@ -38,10 +38,10 @@ void dump_mctp_message(IN void *buffer, IN uintn buffer_size)
         (mctp_message_header->message_type ==
          MCTP_MESSAGE_TYPE_SECURED_MCTP)) {
         dump_dispatch_message(m_mctp_dispatch,
-                      ARRAY_SIZE(m_mctp_dispatch),
-                      mctp_message_header->message_type,
-                      (uint8_t *)buffer + header_size,
-                      buffer_size - header_size);
+                              LIBSPDM_ARRAY_SIZE(m_mctp_dispatch),
+                              mctp_message_header->message_type,
+                              (uint8_t *)buffer + header_size,
+                              buffer_size - header_size);
 
         if (m_param_dump_hex &&
             (mctp_message_header->message_type !=
@@ -56,9 +56,9 @@ void dump_mctp_message(IN void *buffer, IN uintn buffer_size)
     }
 }
 
-void dump_mctp_packet(IN void *buffer, IN uintn buffer_size)
+void dump_mctp_packet(const void *buffer, size_t buffer_size)
 {
-    uintn header_size;
+    size_t header_size;
 
     header_size = sizeof(mctp_header_t);
     if (buffer_size < header_size) {
@@ -66,5 +66,5 @@ void dump_mctp_packet(IN void *buffer, IN uintn buffer_size)
     }
 
     dump_mctp_message((uint8_t *)buffer + header_size,
-              buffer_size - header_size);
+                      buffer_size - header_size);
 }
